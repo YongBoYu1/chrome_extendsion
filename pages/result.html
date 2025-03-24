@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Page Processor Result</title>
+    <link rel="stylesheet" href="result.css">
+</head>
+<body>
+    <header>
+        <div class="toolbar">
+            <button id="backBtn" class="tool-btn" title="Back to browser">← Back</button>
+            <div class="badge-container">
+                <span id="modeLabel" class="mode-label">Processing Mode</span>
+            </div>
+        </div>
+        <div class="page-header">
+            <h1 id="pageTitle">Processed Content</h1>
+            <div class="source-info">
+                <a id="sourceUrl" href="#" target="_blank">Source URL</a>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <div id="errorContainer" class="error-container" style="display: none;">
+            An error occurred while processing the content.
+        </div>
+
+        <div id="resultContainer" class="result-container" style="display: none;">
+            <div id="aiIndicator" class="ai-indicator">
+                <span class="ai-sparkle">✨</span> AI Summary
+            </div>
+            <div id="contentContainer" class="content-container">
+                <!-- Content will be inserted here by JavaScript -->
+            </div>
+        </div>
+    </main>
+
+    <script src="result.js"></script>
+</body>
+</html> 

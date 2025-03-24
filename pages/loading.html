@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Processing Content</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            text-align: center;
+        }
+        .container {
+            max-width: 800px;
+            margin: 50px auto;
+        }
+        h1 {
+            color: #4285f4;
+        }
+        .url-display {
+            word-break: break-all;
+            padding: 10px;
+            background-color: #f5f5f5;
+            border-radius: 4px;
+            margin: 20px 0;
+        }
+        .spinner {
+            margin: 30px auto;
+            width: 50px;
+            height: 50px;
+            border: 5px solid rgba(66, 133, 244, 0.2);
+            border-radius: 50%;
+            border-top-color: #4285f4;
+            animation: spin 1s infinite linear;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .status-updates {
+            margin-top: 20px;
+            text-align: left;
+            background-color: #f9f9f9;
+            padding: 15px;
+            border-radius: 4px;
+        }
+        .status-item {
+            margin-bottom: 5px;
+            padding-left: 20px;
+            position: relative;
+        }
+        .status-item:before {
+            content: "•";
+            position: absolute;
+            left: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Processing Content</h1>
+        <div id="urlDisplay" class="url-display">Loading...</div>
+        <div class="spinner"></div>
+        <div id="statusUpdates" class="status-updates">
+            <div class="status-item">Initializing page processor...</div>
+        </div>
+    </div>
+    <script src="loading.js"></script>
+</body>
+</html> 
