@@ -1,0 +1,491 @@
+/* Minimized CSS with only essential custom styling not covered by Tailwind */
+
+/* CSS variables for any legacy components - will gradually transition to Tailwind */
+:root {
+  /* Only keeping variables that might be needed for non-Tailwind components */
+  --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-normal: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Layout improvements */
+#resultContainer {
+  display: flex !important;
+}
+
+@media (min-width: 1024px) {
+  #resultContainer {
+    flex-direction: row !important;
+  }
+  
+  aside {
+    width: 280px !important;
+    flex-shrink: 0 !important;
+  }
+  
+  main {
+    flex: 1 !important;
+    overflow: hidden !important;
+  }
+}
+
+@media (max-width: 1023px) {
+  #resultContainer {
+    flex-direction: column !important;
+  }
+}
+
+/* Ensure wider layout for Mac screens */
+@media (min-width: 1440px) {
+  .max-w-7xl {
+    max-width: 1440px !important;
+  }
+  
+  #contentContainer {
+    max-width: 1100px;
+  }
+}
+
+/* Container base styles */
+#processingContainer,
+#errorContainer,
+#contentContainer,
+#tocContainer {
+  width: 100%;
+  border-radius: 0.5rem;
+  margin-bottom: 1.5rem;
+  background-color: white;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* Processing container specific styles */
+#processingContainer {
+  min-height: 400px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 2rem;
+}
+
+/* Error container specific styles */
+#errorContainer {
+  background-color: #fef2f2;
+}
+
+/* Content container specific styles */
+#contentContainer {
+  padding: 1.5rem !important;
+}
+
+/* TOC container specific styles */
+#tocContainer {
+  position: sticky;
+  top: 6rem;
+  padding: 1.5rem;
+  max-height: calc(100vh - 8rem);
+  overflow-y: auto;
+}
+
+/* Dark mode styles */
+.dark #processingContainer,
+.dark #errorContainer,
+.dark #contentContainer,
+.dark #tocContainer {
+  background-color: #1f2937;
+}
+
+.dark #errorContainer {
+  background-color: rgba(248, 113, 113, 0.1);
+}
+
+/* Hide containers when not needed */
+#processingContainer.hidden,
+#contentContainer.hidden {
+  display: none !important;
+}
+
+/* Process steps styling */
+.process-steps-container {
+  list-style-type: none;
+  padding-left: 0;
+}
+
+.process-step {
+  position: relative;
+  padding-left: 2.5rem;
+  margin-bottom: 2rem;
+  list-style-type: none !important;
+}
+
+.process-step::before {
+  display: none !important;
+  content: none !important;
+}
+
+.process-step-number {
+  position: absolute;
+  left: 0;
+  top: 0.1rem;
+  width: 1.75rem;
+  height: 1.75rem;
+  @apply bg-blue-500 text-white rounded-full flex items-center justify-center font-semibold text-sm;
+}
+
+/* TOC links */
+#tocList {
+  list-style-type: none;
+  padding-left: 0;
+  margin-bottom: 1.5rem;
+}
+
+#tocList li {
+  margin-bottom: 0.5rem;
+}
+
+#tocList a {
+  display: block;
+  padding: 0.625rem 0.75rem;
+  border-radius: 0.375rem;
+  color: #4b5563;
+  transition: all 0.15s ease;
+  font-size: 0.875rem;
+  line-height: 1.25;
+  text-decoration: none;
+}
+
+#tocList a:hover {
+  background-color: #f3f4f6;
+  color: #2563eb;
+}
+
+#tocList a.active {
+  background-color: rgba(59, 130, 246, 0.1);
+  color: #3b82f6;
+  font-weight: 500;
+}
+
+/* Dark mode TOC styles */
+.dark #tocList a {
+  color: #9ca3af;
+}
+
+.dark #tocList a:hover {
+  background-color: #374151;
+  color: #60a5fa;
+}
+
+.dark #tocList a.active {
+  background-color: rgba(59, 130, 246, 0.2);
+  color: #60a5fa;
+}
+
+/* Back to top button */
+#backToTopBtn {
+  position: fixed;
+  bottom: 1.5rem;
+  right: 1.5rem;
+  display: none;
+  background-color: #3b82f6;
+  color: white;
+  border-radius: 9999px;
+  width: 2.5rem;
+  height: 2.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  transition: background-color 0.2s;
+}
+
+#backToTopBtn:hover {
+  background-color: #2563eb;
+}
+
+/* List styling */
+.custom-bullet-list,
+.prose ul {
+  list-style-type: none !important;
+  margin-left: 0;
+  padding-left: 0;
+}
+
+.custom-bullet-list li,
+.prose ul li {
+  position: relative;
+  padding-left: 1.5rem;
+  margin-bottom: 0.75rem;
+  list-style-type: none !important;
+}
+
+.custom-bullet-list li::before {
+  content: "•";
+  position: absolute;
+  left: 0;
+  top: 0;
+  color: #1a73e8;
+  font-weight: bold;
+  font-size: 1.2em;
+}
+
+/* Key takeaways styling */
+.key-takeaways-list {
+  border-radius: 0.5rem;
+  padding: 0.75rem 1rem;
+  background-color: rgba(37, 99, 235, 0.05);
+  margin-top: 0.75rem;
+}
+
+.key-takeaways-item {
+  position: relative;
+  padding-left: 1.75rem;
+  margin-bottom: 0.75rem;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: #4b5563;
+}
+
+.key-takeaways-item:last-child {
+  margin-bottom: 0;
+}
+
+.key-takeaways-item:before {
+  content: "✓";
+  position: absolute;
+  left: 0;
+  top: 0.1rem;
+  color: #2563eb;
+  font-weight: bold;
+  font-size: 1rem;
+}
+
+/* Dark mode key takeaways */
+.dark .key-takeaways-list {
+  background-color: rgba(96, 165, 250, 0.05);
+}
+
+.dark .key-takeaways-item {
+  color: #d1d5db;
+}
+
+.dark .key-takeaways-item:before {
+  color: #60a5fa;
+}
+
+/* Processing UI styles */
+.processing-step {
+  display: flex;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding: 0.5rem;
+  border-radius: 0.375rem;
+  opacity: 0.6;
+  transition: all 0.2s ease;
+}
+
+.processing-step.active {
+  opacity: 1;
+}
+
+.processing-step.completed {
+  opacity: 1;
+}
+
+.step-indicator-processing {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background-color: #f1f3f4;
+  margin-right: 8px;
+  font-weight: 600;
+  font-size: 0.75rem;
+  color: #5f6368;
+}
+
+/* Progress bar */
+.processing-progress {
+  width: 100%;
+  height: 4px;
+  background-color: #e5e7eb;
+  border-radius: 2px;
+  overflow: hidden;
+  margin: 1.5rem 0;
+}
+
+.progress-bar {
+  height: 100%;
+  background-color: #3b82f6;
+  border-radius: 2px;
+  transition: width 0.5s ease-out;
+}
+
+/* Dark mode processing UI */
+.dark .processing-progress {
+  background-color: #374151;
+}
+
+.dark .progress-bar {
+  background-color: #60a5fa;
+}
+
+.dark .step-indicator-processing {
+  background-color: #374151;
+  color: #9ca3af;
+}
+
+.dark .processing-step.active .step-indicator-processing {
+  background-color: rgba(96, 165, 250, 0.2);
+  color: #60a5fa;
+}
+
+.dark .processing-step.completed .step-indicator-processing {
+  background-color: rgba(52, 211, 153, 0.2);
+  color: #34d399;
+}
+
+/* Top panel styling */
+header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background-color: white;
+  border-bottom: 1px solid #eaeaea;
+  padding: 0.75rem 1rem;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  width: 100%;
+}
+
+.dark header {
+  background-color: #1f2937;
+  border-bottom-color: #374151;
+}
+
+.top-panel {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+
+/* Navigation buttons */
+.back-button,
+.source-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  text-decoration: none;
+  transition: all 0.15s ease;
+  border: none;
+  cursor: pointer;
+}
+
+.back-button {
+  background-color: #f3f4f6;
+  color: #4b5563;
+}
+
+.back-button:hover {
+  background-color: #e5e7eb;
+}
+
+.source-link {
+  background-color: #f3f4f6;
+  color: #4b5563;
+}
+
+.source-link:hover {
+  background-color: #e5e7eb;
+}
+
+/* Dark mode navigation */
+.dark .back-button,
+.dark .source-link {
+  background-color: #374151;
+  color: #e5e7eb;
+}
+
+.dark .back-button:hover,
+.dark .source-link:hover {
+  background-color: #4b5563;
+}
+
+/* Reading stats section */
+.reading-stats-container {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  margin-top: 0.75rem;
+  padding: 0.75rem;
+  background-color: #f9fafb;
+  border-radius: 0.5rem;
+}
+
+.reading-stats-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.reading-stats-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 9999px;
+  background-color: #e5e7eb;
+  color: #4b5563;
+}
+
+.reading-stats-value {
+  font-weight: 600;
+  color: #1f2937;
+  font-size: 0.875rem;
+  margin: 0;
+}
+
+.reading-stats-label {
+  color: #6b7280;
+  font-size: 0.75rem;
+  margin: 0;
+}
+
+/* Dark mode reading stats */
+.dark .reading-stats-container {
+  background-color: #374151;
+}
+
+.dark .reading-stats-icon {
+  background-color: #4b5563;
+  color: #e5e7eb;
+}
+
+.dark .reading-stats-value {
+  color: #f9fafb;
+}
+
+.dark .reading-stats-label {
+  color: #9ca3af;
+}
+
+/* Hidden class */
+.hidden {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  position: absolute !important;
+  left: -9999px !important;
+  height: 0 !important;
+  width: 0 !important;
+  overflow: hidden !important;
+  z-index: -1 !important;
+  pointer-events: none !important;
+} 

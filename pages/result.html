@@ -1,42 +1,457 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Page Processor Result</title>
-    <link rel="stylesheet" href="result.css">
+    <!-- Use system fonts that look similar to Inter to avoid CSP issues -->
+    <style>
+        /* Ensure system font stack is applied to all elements */
+        body, h1, h2, h3, h4, h5, h6, p, a, span, div, button, input, textarea, select {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif !important;
+        }
+        
+        /* Add proper letter spacing for better readability similar to Inter */
+        body {
+            letter-spacing: 0.01em;
+            line-height: 1.8;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        
+        /* Critical fix for summary container stability */
+        .summary-container {
+            width: 100% !important;
+            max-width: 100% !important;
+            overflow-wrap: break-word !important;
+            word-wrap: break-word !important;
+            word-break: break-word !important;
+        }
+        
+        .summary-container * {
+            max-width: 100% !important;
+            overflow-wrap: break-word !important;
+            box-sizing: border-box !important;
+        }
+        
+        /* Wikipedia-specific improvements */
+        .summary-container sup {
+            vertical-align: super;
+            font-size: 0.75em;
+            line-height: 0;
+            padding: 0 2px;
+        }
+        
+        .summary-container table {
+            display: block;
+            width: 100%;
+            overflow-x: auto;
+            margin: 1.5rem 0;
+            border-collapse: collapse;
+        }
+        
+        .summary-container img {
+            max-width: 100% !important;
+            height: auto !important;
+            margin: 1rem auto;
+            display: block;
+        }
+        
+        /* Ensure proper sizing for all elements */
+        #resultContainer {
+            display: flex !important;
+            flex-direction: column !important;
+            gap: 1rem !important;
+        }
+        
+        #contentContainer {
+            width: 100% !important;
+            max-width: 100% !important;
+            padding: 1.5rem !important;
+            overflow-wrap: break-word !important;
+            overflow: hidden !important;
+        }
+        
+        /* Headings get negative letter spacing similar to Inter */
+        h1, h2, h3 {
+            letter-spacing: -0.02em;
+            line-height: 1.25;
+            font-weight: 700;
+        }
+        
+        /* Improved typography for content */
+        .prose p {
+            margin-bottom: 1.25rem;
+            line-height: 1.8;
+        }
+        
+        .prose h1 {
+            font-size: 2.25rem;
+            margin-top: 2rem;
+            margin-bottom: 1.5rem;
+            font-weight: 700;
+        }
+        
+        .prose h2 {
+            font-size: 1.875rem;
+            margin-top: 2rem;
+            margin-bottom: 1rem;
+            font-weight: 700;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+        }
+        
+        .prose h3 {
+            font-size: 1.5rem;
+            margin-top: 1.5rem;
+            margin-bottom: 1rem;
+            font-weight: 600;
+        }
+        
+        /* TOC styling */
+        #tocList a {
+            font-size: 0.95rem;
+            line-height: 1.4;
+            display: block;
+            padding: 0.5rem 0.75rem;
+            border-radius: 0.375rem;
+            color: #4b5563;
+            transition: background-color 0.15s, color 0.15s;
+            margin-bottom: 0.25rem;
+        }
+        
+        #tocList a:hover {
+            background-color: rgba(209, 213, 219, 0.3);
+            color: #1e40af;
+        }
+        
+        #tocList li {
+            margin-bottom: 0.25rem;
+        }
+        
+        #tocList .active {
+            font-weight: 500;
+            color: #1a73e8;
+            background-color: rgba(26, 115, 232, 0.08);
+        }
+        
+        /* Improved sidebar styling */
+        .toc-list {
+            border-radius: 0.5rem;
+            padding: 0.25rem;
+        }
+        
+        #tocContainer {
+            background-color: white;
+            border-radius: 0.75rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            padding: 1.25rem;
+            height: calc(100vh - 8rem);
+            overflow-y: auto;
+        }
+        
+        .key-takeaways-list {
+            border-radius: 0.5rem;
+            padding: 1rem;
+            background-color: rgba(59, 130, 246, 0.05);
+            margin-top: 0.5rem;
+        }
+        
+        .key-takeaways-item {
+            position: relative;
+            padding-left: 1.5rem;
+            margin-bottom: 0.75rem;
+            font-size: 0.875rem;
+            color: #4b5563;
+        }
+        
+        .key-takeaways-item:before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            color: #1a73e8;
+            font-weight: bold;
+        }
+        
+        /* Enhanced bullet points */
+        .prose ul li {
+            position: relative;
+            padding-left: 1.5em;
+        }
+        
+        .prose ul li::before {
+            content: none !important; /* Don't add bullets via prose styling */
+            display: none !important;
+        }
+        
+        /* Enhanced source reference */
+        .source-reference {
+            display: inline-flex;
+            align-items: center;
+            font-size: 0.875rem;
+            color: #1967d2;
+            padding: 0.25rem 0.5rem;
+            background-color: rgba(25, 103, 210, 0.05);
+            border-radius: 0.375rem;
+            transition: background-color 0.15s ease;
+        }
+        
+        .source-reference:hover {
+            background-color: rgba(25, 103, 210, 0.1);
+            text-decoration: none;
+        }
+        
+        /* Process steps styling */
+        .process-step {
+            position: relative;
+            padding-left: 2.5rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .process-step-number {
+            position: absolute;
+            left: 0;
+            top: 0.1rem;
+            width: 1.75rem;
+            height: 1.75rem;
+            background-color: #1a73e8;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 0.875rem;
+        }
+        
+        /* Key concept box */
+        .key-concept {
+            background-color: rgba(52, 168, 83, 0.05);
+            border-left: 3px solid #34a853;
+            padding: 1.25rem;
+            border-radius: 0.375rem;
+            margin: 1.75rem 0;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+        }
+        
+        .key-concept p {
+            margin-bottom: 0.75rem;
+        }
+        
+        .key-concept p:last-child {
+            margin-bottom: 0;
+        }
+        
+        .key-concept strong {
+            color: #137333;
+        }
+        
+        /* Back button styling */
+        .back-button {
+            display: inline-flex;
+            align-items: center;
+            font-weight: 500;
+            color: #5f6368;
+            padding: 0.5rem 0.75rem;
+            background-color: rgba(0, 0, 0, 0.03);
+            border-radius: 0.375rem;
+            border: none;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+        
+        .back-button:hover {
+            background-color: rgba(0, 0, 0, 0.05);
+            color: #202124;
+        }
+        
+        .back-button svg {
+            margin-right: 0.375rem;
+        }
+        
+        /* Reading time badge enhancement */
+        .reading-time-badge {
+            display: inline-flex;
+            align-items: center;
+            background-color: rgba(26, 115, 232, 0.08);
+            color: #1a73e8;
+            font-weight: 500;
+            padding: 0.25rem 0.625rem;
+            border-radius: 1rem;
+            font-size: 0.875rem;
+        }
+        
+        .reading-time-badge svg {
+            margin-right: 0.375rem;
+            width: 0.875rem;
+            height: 0.875rem;
+        }
+        
+        /* Ensure all content stays within bounds */
+        @media (max-width: 768px) {
+            #contentContainer {
+                padding: 1rem !important;
+            }
+            
+            .summary-container h1 {
+                font-size: 1.75rem !important;
+            }
+            
+            .summary-container h2 {
+                font-size: 1.5rem !important;
+            }
+            
+            .summary-container h3 {
+                font-size: 1.25rem !important;
+            }
+        }
+    </style>
+    <link rel="icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIj48cGF0aCBmaWxsPSIjNDI4NWY0IiBkPSJNNDIwLjU1IDEwNi41MUM0MjcuODUgMTA2LjUxIDQzMy43NSAxMTIuNDEgNDMzLjc1IDExOS43MVYzOTIuM0M0MzMuNzUgMzk5LjYgNDI3Ljg1IDQwNS41IDQyMC41NSA0MDUuNUg5MS40NUM4NC4xNSA0MDUuNSA3OC4yNSAzOTkuNiA3OC4yNSAzOTIuM1YxMTkuNzFDNzguMjUgMTEyLjQxIDg0LjE1IDEwNi41MSA5MS40NSAxMDYuNTFINDIwLjU1TTE5MC45MSAyMjYuNUgzMjEuMDlDMzI3Ljc0IDIyNi41IDMzMy4xMyAyMjEuMTEgMzMzLjEzIDIxNC40NEMzMzMuMTMgMjA3Ljc3IDMyNy43NCAyMDIuMzggMzIxLjA5IDIwMi4zOEgxOTAuOTFDMTg0LjI2IDIwMi4zOCAxNzguODcgMjA3Ljc3IDE3OC44NyAyMTQuNDRDMTc4Ljg3IDIyMS4xMSAxODQuMjYgMjI2LjUgMTkwLjkxIDIyNi41Wk0xOTAuOTEgMTc1LjM0SDMyMS4wOUMzMjcuNzQgMTc1LjM0IDMzMy4xMyAxNjkuOTUgMzMzLjEzIDE2My4yOEMzMzMuMTMgMTU2LjYxIDMyNy43NCAxNTEuMjIgMzIxLjA5IDE1MS4yMkgxOTAuOTFDMTg0LjI2IDE1MS4yMiAxNzguODcgMTU2LjYxIDE3OC44NyAxNjMuMjhDMTc4Ljg3IDE2OS45NSAxODQuMjYgMTc1LjM0IDE5MC45MSAxNzUuMzRaTTE5MC45MSAzMjguODFIMjgwLjA0QzI4Ni42OSAzMjguODEgMjkyLjA4IDMyMy40MiAyOTIuMDggMzE2Ljc5QzI5Mi4wOCAzMTAuMDggMjg2LjY5IDMwNC42OSAyODAuMDQgMzA0LjY5SDE5MC45MUMxODQuMjYgMzA0LjY5IDE3OC44NyAzMTAuMDggMTc4Ljg3IDMxNi43NUMxNzguODcgMzIzLjQyIDE4NC4yNiAzMjguODEgMTkwLjkxIDMyOC44MVpNMTkwLjkxIDI3Ny42NkgzMjEuMDlDMzI3Ljc0IDI3Ny42NiAzMzMuMTMgMjcyLjI3IDMzMy4xMyAyNjUuNkMzMzMuMTMgMjU4LjkzIDMyNy43NCAyNTMuNTQgMzIxLjA5IDI1My41NEgxOTAuOTFDMTg0LjI2IDI1My41NCAxNzguODcgMjU4LjkzIDE3OC44NyAyNjUuNkMxNzguODcgMjcyLjI3IDE4NC4yNiAyNzcuNjYgMTkwLjkxIDI3Ny42NloiLz48Y2lyY2xlIGN4PSIzNjAiIGN5PSIzMzAiIHI9IjY1IiBmaWxsPSIjNDI4NWY0IiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjEwIi8+PHRleHQgeD0iMzQyIiB5PSIzNTAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjQwIiBmb250LXdlaWdodD0iYm9sZCIgZmlsbD0id2hpdGUiPuKchTwvdGV4dD48L3N2Zz4=" type="image/svg+xml">
+    <!-- Add static script imports -->
+    <script src="../scripts/utils.js"></script>
+    <script src="../scripts/error-handler.js"></script>
+    <script src="../scripts/content-processor.js"></script>
+    <script src="../scripts/ui-controller.js"></script>
+    <link rel="stylesheet" href="result/styles.css">
+    <link rel="stylesheet" href="tailwind-output.css">
 </head>
-<body>
-    <header>
-        <div class="toolbar">
-            <button id="backBtn" class="tool-btn" title="Back to browser">← Back</button>
-            <div class="badge-container">
-                <span id="modeLabel" class="mode-label">Processing Mode</span>
-            </div>
-        </div>
-        <div class="page-header">
-            <h1 id="pageTitle">Processed Content</h1>
-            <div class="source-info">
-                <a id="sourceUrl" href="#" target="_blank">Source URL</a>
+<body class="bg-gray-50 dark:bg-gray-900">
+    <header class="sticky top-0 z-10 bg-white dark:bg-gray-800 shadow-sm py-2 px-4 mb-4">
+        <div class="max-w-7xl mx-auto">
+            <!-- Replace the old header content with the new top panel -->
+            <div class="top-panel">
+                <div class="flex items-center">
+                    <a href="#" id="backBtn" class="back-button">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M19 12H5"></path>
+                            <path d="M12 19l-7-7 7-7"></path>
+                        </svg>
+                        Back
+                    </a>
+                </div>
+                <div class="source-link-container">
+                    <a id="sourceUrl" href="#" target="_blank" class="source-link">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                            <polyline points="15 3 21 3 21 9"></polyline>
+                            <line x1="10" y1="14" x2="21" y2="3"></line>
+                        </svg>
+                        Source
+                    </a>
+                </div>
             </div>
         </div>
     </header>
 
-    <main>
-        <div id="errorContainer" class="error-container" style="display: none;">
-            An error occurred while processing the content.
-        </div>
-
-        <div id="resultContainer" class="result-container" style="display: none;">
-            <div id="aiIndicator" class="ai-indicator">
-                <span class="ai-sparkle">✨</span> AI Summary
+    <!-- Main layout with sidebar and content area -->
+    <div id="resultContainer" class="flex flex-col lg:flex-row max-w-7xl mx-auto px-4 pt-4 pb-12 gap-6">
+        <aside class="lg:sticky lg:top-24 lg:w-72 lg:flex-shrink-0 lg:self-start">
+            <!-- Sidebar content with improved spacing -->
+            <div id="tocContainer" class="rounded-lg shadow-sm p-4 bg-white dark:bg-gray-800">
+                <h3 class="font-semibold text-gray-800 dark:text-gray-200 mb-4">Contents</h3>
+                <ul id="tocList" class="toc-list mb-6"></ul>
+                
+                <!-- Reading Stats Section with improved design -->
+                <div class="border-t border-gray-100 dark:border-gray-700 pt-4 mb-4">
+                    <h3 class="font-semibold text-gray-800 dark:text-gray-200 mb-3">Reading Stats</h3>
+                    <div class="reading-stats-container">
+                        <div class="reading-stats-item">
+                            <div class="reading-stats-icon">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <polyline points="12 6 12 12 16 14"></polyline>
+                                </svg>
+                            </div>
+                            <div>
+                                <p id="readingTimeValue" class="reading-stats-value">3 min</p>
+                                <p class="reading-stats-label">read</p>
+                            </div>
+                        </div>
+                        <div class="reading-stats-item">
+                            <div class="reading-stats-icon">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                                    <line x1="9" y1="10" x2="15" y2="10"></line>
+                                    <line x1="12" y1="7" x2="12" y2="13"></line>
+                                </svg>
+                            </div>
+                            <div>
+                                <p id="wordCountValue" class="reading-stats-value">750</p>
+                                <p class="reading-stats-label">words</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Key Takeaways with consistent styling -->
+                <div id="mainKeyTakeaways">
+                    <h3 class="font-semibold text-gray-800 dark:text-gray-200 mb-3">Key Takeaways</h3>
+                    <ul id="mainKeyTakeawaysList" class="key-takeaways-list"></ul>
+                </div>
             </div>
-            <div id="contentContainer" class="content-container">
-                <!-- Content will be inserted here by JavaScript -->
+        </aside>
+        
+        <!-- Main content area -->
+        <main class="flex-1">
+            <!-- Processing container -->
+            <div id="processingContainer" class="processing-container hidden">
+                <h2 id="processingTitle" class="text-xl font-semibold text-gray-900 dark:text-gray-100">Processing Your Content</h2>
+                <p id="processingStatus" class="text-gray-600 dark:text-gray-300 text-center">Analyzing content and generating insights...</p>
+                
+                <div class="processing-steps">
+                    <div id="processing-step-extract" class="processing-step pending">
+                        <div class="step-indicator-processing">1</div>
+                        <span class="text-sm font-medium">Extracting content</span>
+                    </div>
+                    <div id="processing-step-analyze" class="processing-step pending">
+                        <div class="step-indicator-processing">2</div>
+                        <span class="text-sm font-medium">Analyzing structure</span>
+                    </div>
+                    <div id="processing-step-generate" class="processing-step pending">
+                        <div class="step-indicator-processing">3</div>
+                        <span class="text-sm font-medium">Generating summary</span>
+                    </div>
+                </div>
+                
+                <div id="processingProgress" class="processing-progress">
+                    <div id="progressBar" class="progress-bar" style="width: 0%"></div>
+                </div>
+                
+                <button id="cancelProcessingBtn" class="mt-4 px-4 py-2 bg-white border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-600">
+                    Cancel
+                </button>
             </div>
-        </div>
-    </main>
-
-    <script src="result.js"></script>
+            
+            <!-- Content container -->
+            <div id="contentContainer" class="bg-white dark:bg-gray-800 rounded-lg shadow p-6 prose dark:prose-invert max-w-none">
+                <!-- Content will be added here -->
+                <div id="summaryContainer" class="summary-container"></div>
+            </div>
+            
+            <!-- Error container -->
+            <div id="errorContainer" class="bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 p-6 rounded-lg mb-6 hidden">
+                <div class="flex">
+                    <div class="flex-shrink-0">
+                        <svg class="h-6 w-6 text-red-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+                        </svg>
+                    </div>
+                    <div class="ml-4">
+                        <h3 class="text-lg font-medium text-red-800 dark:text-red-200" id="errorTitle">Error Processing Content</h3>
+                        <p class="mt-2 text-red-700 dark:text-red-300" id="errorMessage"></p>
+                        <button id="retryBtn" class="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition duration-150">Retry</button>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+    
+    <!-- Back to top button -->
+    <button id="backToTopBtn" class="fixed bottom-6 right-6 bg-blue-500 text-white rounded-full p-3 shadow-lg hover:bg-blue-600 transition duration-150 hidden">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" />
+        </svg>
+    </button>
+    <script type="module" src="result/index.js"></script>
 </body>
 </html> 
