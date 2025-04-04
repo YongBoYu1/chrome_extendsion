@@ -24,18 +24,35 @@ function setupNavigationHandlers() {
     // Source link handler
     const sourceUrl = document.getElementById('sourceUrl');
     if (sourceUrl) {
-        // Update source URL when content is loaded
-        chrome.storage.local.get(['currentUrl'], function(result) {
-            if (result.currentUrl) {
-                sourceUrl.href = result.currentUrl;
-            }
-        });
+        // Use the tab's target URL from session storage
+        const targetUrl = sessionStorage.getItem('targetUrl');
+        if (targetUrl) {
+            sourceUrl.href = targetUrl;
+            console.log('[DEBUG] Source URL set to:', targetUrl);
+        } else {
+            // Fall back to storage if not in session storage
+            chrome.storage.local.get(['currentUrl'], function(result) {
+                if (result.currentUrl) {
+                    sourceUrl.href = result.currentUrl;
+                }
+            });
+        }
     }
 }
 
 async function initializeResultPage() {
     try {
         console.log('[DEBUG] Result page initializing...');
+        
+        // Extract and store the target URL for this tab
+        const urlParams = new URLSearchParams(window.location.search);
+        const targetUrl = urlParams.get('url');
+        if (targetUrl) {
+            sessionStorage.setItem('targetUrl', targetUrl);
+            console.log('[DEBUG] Tab initialized for URL:', targetUrl);
+        } else {
+            console.warn('[WARN] No target URL specified for this tab');
+        }
         
         // Wait for background script to be ready
         await waitForBackgroundReady();

@@ -31,10 +31,21 @@ export function updateProcessingStatus(state) {
 export function setupProcessingMessageListener() {
     console.log('[DEBUG] Setting up processing message listener...');
     
+    // Get the URL this tab is responsible for
+    const targetUrl = sessionStorage.getItem('targetUrl');
+    console.log('[DEBUG] Setting up listener for URL:', targetUrl);
+    
     chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         console.log('[DEBUG] Result page received message:', message);
         
         if (message.type === 'processing_update') {
+            // If this message is not for our URL, ignore it
+            if (targetUrl && message.state && message.state.url !== targetUrl) {
+                console.log('[DEBUG] Ignoring update for different URL:', message.state.url);
+                sendResponse({ received: true, ignored: true });
+                return;
+            }
+            
             console.log('[DEBUG] Processing update received:', {
                 stage: message.state?.stage,
                 progress: message.state?.progress,
@@ -62,8 +73,12 @@ export function setupProcessingMessageListener() {
 export function registerWithBackgroundScript() {
     console.log('[DEBUG] Registering result page with background script...');
     
+    // Get the URL this tab is responsible for
+    const targetUrl = sessionStorage.getItem('targetUrl');
+    
     chrome.runtime.sendMessage({
-        type: 'result_page_ready'
+        type: 'result_page_ready',
+        url: targetUrl // Include the URL this tab is responsible for
     }, function(response) {
         if (chrome.runtime.lastError) {
             console.error('[ERROR] Failed to register with background script:', chrome.runtime.lastError);
@@ -72,7 +87,7 @@ export function registerWithBackgroundScript() {
         }
         
         if (response && response.acknowledged) {
-            console.log('[DEBUG] Successfully registered with background script');
+            console.log('[DEBUG] Successfully registered with background script for URL:', targetUrl);
         }
     });
 }
