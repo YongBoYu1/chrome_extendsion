@@ -1,137 +1,139 @@
+import { storageManager } from '../utils/storage.js';
+import { apiClient } from '../utils/api.js';
+import { ProcessingQueue } from './processing/queue.js';
+import { ProcessingState } from './processing/state.js';
+import { MessageHandler } from './processing/handler.js';
+
 /**
  * Background script for Page Processor extension
- * Handles installation events and background tasks
+ * Handles state management and coordinates between components
  */
 
-// Store content temporarily
-let extractedContent = {};
+// Initialize components
+const stateManager = new ProcessingState();
+const queue = new ProcessingQueue(apiClient, stateManager);
+const messageHandler = new MessageHandler(queue, stateManager);
 
-// Keep track of processing state
-let processingState = null;
+// Track open result tabs
+let resultTabs = [];
 
-// Listen for installation event
-chrome.runtime.onInstalled.addListener(function(details) {
-    if (details.reason === 'install') {
-        // Open a welcome page when first installed
-        chrome.tabs.create({
-            url: 'https://github.com/yourusername/page-processor'
-        });
-    }
-});
+console.log('DEBUG: Background script loaded');
 
-// Listen for messages from content script or popup
-chrome.runtime.onMessage.addListener(function(message, sender, sendResponse) {
-    if (message.type === 'ping_backend') {
-        // Ping the backend to check if it's running
-        fetch('http://localhost:5001/api/ping')
-            .then(response => response.json())
-            .then(data => {
-                sendResponse({ status: 'connected', data: data });
-            })
-            .catch(error => {
-                sendResponse({ status: 'disconnected', error: error.message });
-            });
-        return true; // Keep the message channel open for async response
-    }
-    
-    if (message.type === 'start_processing') {
-        // Save the processing state
-        processingState = {
-            mode: message.mode,
-            tabId: message.tabId,
-            title: message.title,
-            url: message.url,
-            stage: 'started',
-            startTime: new Date().getTime()
-        };
-        
-        // Acknowledge receipt
-        sendResponse({ status: 'processing_started', state: processingState });
-        return true;
-    }
-    
-    if (message.type === 'update_processing') {
-        // Update the processing state
-        if (processingState) {
-            processingState.stage = message.stage;
-            processingState.progress = message.progress;
-            processingState.statusText = message.statusText;
-        }
-        
-        // Acknowledge receipt
-        sendResponse({ status: 'processing_updated', state: processingState });
-        return true;
-    }
-    
-    if (message.type === 'get_processing_state') {
-        // Return the current processing state
-        sendResponse({ 
-            status: processingState ? 'processing' : 'idle',
-            state: processingState
-        });
-        return true;
-    }
-    
-    if (message.type === 'end_processing') {
-        // Clear the processing state
-        const oldState = processingState;
-        processingState = null;
-        
-        // Acknowledge receipt
-        sendResponse({ 
-            status: 'processing_ended', 
-            previousState: oldState
-        });
-        return true;
-    }
-});
-
+// Register message listener
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    if (message.action === 'setPageContent') {
-        // Store content for the new tab
-        extractedContent[message.tabId] = {
-            content: message.content,
-            summarize: message.summarize
-        };
-    }
+    messageHandler.handleMessage(message, sender)
+        .then(response => sendResponse(response))
+        .catch(error => {
+            console.error('[ERROR] Message handling failed:', error);
+            sendResponse({ error: error.message });
+        });
+    return true; // Keep message channel open
 });
 
 // Listen for tab updates
-chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-    // Check if our newtab page is fully loaded
-    if (
-        changeInfo.status === 'complete' && 
-        tab.url && 
-        tab.url.includes(chrome.runtime.getURL('newtab/newtab.html')) && 
-        extractedContent[tabId]
-    ) {
-        // Send content to the new tab page
-        chrome.tabs.sendMessage(tabId, {
-            action: 'displayContent',
-            content: extractedContent[tabId].content,
-            summarize: extractedContent[tabId].summarize
-        });
-        
-        // Clean up
-        delete extractedContent[tabId];
+chrome.tabs.onUpdated.addListener(function(tabId, changeInfo, tab) {
+    if (changeInfo.status === 'complete' && tab.url && tab.url.includes('pages/result.html')) {
+        console.log('Result page loaded:', tabId);
+        resultTabs.push(tabId);
     }
 });
 
-// Check for interrupted processing when popup reopens
-chrome.runtime.onConnect.addListener(function(port) {
-    if (port.name === "popup") {
-        // The popup has connected
-        port.onDisconnect.addListener(function() {
-            // The popup has closed, but processing might still be happening
-            // State will be preserved in processingState
+// Remove tabs from tracking when closed
+chrome.tabs.onRemoved.addListener(function(tabId) {
+    const initialLength = resultTabs.length;
+    resultTabs = resultTabs.filter(id => id !== tabId);
+    if (resultTabs.length < initialLength) {
+        console.log('[DEBUG] Result tab removed:', tabId, 'Current tabs:', resultTabs);
+    }
+});
+
+// Reset state on extension startup
+chrome.runtime.onStartup.addListener(async function() {
+    await resetProcessingState();
+});
+
+// Reset state on extension installation/update
+chrome.runtime.onInstalled.addListener(async function() {
+    await resetProcessingState();
+});
+
+async function resetProcessingState() {
+    stateManager.clear();
+    queue.clear();
+    await storageManager.clearProcessingState();
+}
+
+// Helper function to send message to a specific tab
+function sendMessageToTab(tabId, message) {
+    return new Promise((resolve, reject) => {
+        chrome.tabs.sendMessage(tabId, message, response => {
+            if (chrome.runtime.lastError) {
+                reject(chrome.runtime.lastError);
+            } else {
+                resolve(response);
+            }
         });
-        
-        // Send current state to popup if processing is happening
-        if (processingState) {
-            port.postMessage({
-                type: 'processing_state_update',
-                state: processingState
+    });
+}
+
+// Helper function to broadcast to all result tabs
+function broadcastToResultTabs(message) {
+    resultTabs.forEach(tabId => {
+        sendMessageToTab(tabId, message)
+            .catch(error => {
+                console.error('[ERROR] Failed to send message to tab:', tabId, error);
             });
+    });
+}
+
+// Add state observer to handle storage updates
+stateManager.addObserver(async (state) => {
+    if (state) {
+        try {
+            // Perform all state-related operations as a transaction
+            // This helps prevent race conditions with partial state updates
+            
+            // 1. Update persistent storage first
+            await storageManager.setProcessingState(state);
+            
+            // 2. Store processed content if available
+            if (state.stage === 'completed' && state.processedContent) {
+                console.log('[DEBUG] Storing processed content for URL:', state.url);
+                try {
+                    await storageManager.storeContent(state.processedContent);
+                } catch (contentError) {
+                    console.error('[ERROR] Failed to store content:', contentError);
+                    // Continue with broadcast even if content storage fails
+                }
+            }
+            
+            // 3. Broadcast updates to result tabs
+            // Use a copy of the state to avoid race conditions with modifications
+            const stateCopy = JSON.parse(JSON.stringify(state));
+            broadcastToResultTabs({
+                type: 'processing_update',
+                state: stateCopy
+            });
+            
+            console.log('[DEBUG] State update successfully processed');
+        } catch (error) {
+            console.error('[ERROR] Failed to process state update:', error);
+        }
+    } else {
+        // Clear state
+        try {
+            await storageManager.clearProcessingState();
+        } catch (error) {
+            console.error('[ERROR] Failed to clear processing state:', error);
         }
     }
-}); 
+});
+
+// Add helper function for estimating reading time if needed
+function estimateReadingTime(text) {
+    if (!text) return 1;
+    const wordCount = text.split(/\s+/).length;
+    // Average reading speed: 200-250 words per minute
+    const minutes = Math.max(1, Math.round(wordCount / 225));
+    return minutes;
+}
