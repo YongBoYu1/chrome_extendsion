@@ -54,7 +54,7 @@ graph TD
 - Content display
 - Processing status
 - UI state management
-- Dark mode support
+- Light mode support
 
 ### 2. Python Backend (`backend/`)
 

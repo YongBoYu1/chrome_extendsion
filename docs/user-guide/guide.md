@@ -108,7 +108,7 @@ This Chrome Extension helps you extract, process, and read web content in a clea
 - Scroll through content
 - Jump to sections
 - Adjust text size
-- Toggle dark mode
+- Take breaks for long content
 
 #### Interaction Options
 - Copy text
@@ -121,9 +121,8 @@ This Chrome Extension helps you extract, process, and read web content in a clea
 ### Display Settings
 
 #### Theme Options
-- Light mode
-- Dark mode
-- Auto (system preference)
+- Light mode only
+- System preference
 
 #### Text Customization
 - Font size
@@ -150,7 +149,6 @@ This Chrome Extension helps you extract, process, and read web content in a clea
 ### Global Shortcuts
 - `Alt + P`: Process current page
 - `Alt + R`: Toggle reading mode
-- `Alt + D`: Toggle dark mode
 - `Esc`: Close extension view
 
 ### Navigation
