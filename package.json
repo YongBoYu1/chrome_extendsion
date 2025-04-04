@@ -1,0 +1,33 @@
+{
+  "name": "chrome_extendsion",
+  "version": "1.0.0",
+  "description": "A Chrome extension that processes web pages with various modes: - **Summarize**: Create a summary of the page content - **Focus View**: Strip distractions for better reading - **Duplicate**: Create a clean duplicate of the page using FireCrawl",
+  "main": "index.js",
+  "scripts": {
+    "build:css": "npx tailwindcss -i ./src/tailwind.css -o ./pages/tailwind.css --minify",
+    "watch:css": "npx tailwindcss -i ./src/tailwind.css -o ./pages/tailwind.css --watch",
+    "dev": "npm run watch:css",
+    "build": "npm run build:css",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/YongBoYu1/chrome_extendsion.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/YongBoYu1/chrome_extendsion/issues"
+  },
+  "homepage": "https://github.com/YongBoYu1/chrome_extendsion#readme",
+  "devDependencies": {
+    "@tailwindcss/typography": "^0.5.16",
+    "autoprefixer": "^10.4.21",
+    "postcss": "^8.5.3",
+    "tailwindcss": "^4.0.16"
+  },
+  "dependencies": {
+    "node-fetch": "^2.7.0"
+  }
+}
