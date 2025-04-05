@@ -66,24 +66,50 @@ async function resetProcessingState() {
 // Helper function to send message to a specific tab
 function sendMessageToTab(tabId, message) {
     return new Promise((resolve, reject) => {
-        chrome.tabs.sendMessage(tabId, message, response => {
+        // First check if the tab exists and is in a valid state
+        chrome.tabs.get(tabId, (tab) => {
             if (chrome.runtime.lastError) {
-                reject(chrome.runtime.lastError);
-            } else {
-                resolve(response);
+                // Tab doesn't exist anymore
+                reject({tabMissing: true, error: chrome.runtime.lastError});
+                return;
             }
+            
+            // Tab exists, try to send the message
+            chrome.tabs.sendMessage(tabId, message, response => {
+                if (chrome.runtime.lastError) {
+                    reject(chrome.runtime.lastError);
+                } else {
+                    resolve(response);
+                }
+            });
         });
     });
 }
 
 // Helper function to broadcast to all result tabs
 function broadcastToResultTabs(message) {
-    resultTabs.forEach(tabId => {
+    // Create a safe copy of resultTabs to iterate over, as we might modify the original
+    const tabsToUpdate = [...resultTabs];
+    const failedTabs = [];
+    
+    tabsToUpdate.forEach(tabId => {
         sendMessageToTab(tabId, message)
             .catch(error => {
-                console.error('[ERROR] Failed to send message to tab:', tabId, error);
+                if (error.tabMissing) {
+                    // Tab doesn't exist anymore, remove it from our tracking
+                    failedTabs.push(tabId);
+                    console.log('[INFO] Removing non-existent tab from tracking:', tabId);
+                } else {
+                    console.error('[ERROR] Failed to send message to tab:', tabId, error);
+                }
             });
     });
+    
+    // Clean up any failed tabs from our resultTabs array
+    if (failedTabs.length > 0) {
+        resultTabs = resultTabs.filter(id => !failedTabs.includes(id));
+        console.log('[DEBUG] Updated result tabs after removing failed tabs:', resultTabs);
+    }
 }
 
 // Add state observer to handle storage updates
