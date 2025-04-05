@@ -21,22 +21,39 @@ function setupNavigationHandlers() {
         });
     }
 
-    // Source link handler
+    // Enhanced Source link handler with proper URL validation and target
     const sourceUrl = document.getElementById('sourceUrl');
     if (sourceUrl) {
         // Use the tab's target URL from session storage
         const targetUrl = sessionStorage.getItem('targetUrl');
-        if (targetUrl) {
+        if (targetUrl && isValidUrl(targetUrl)) {
             sourceUrl.href = targetUrl;
+            sourceUrl.setAttribute('target', '_blank');
+            sourceUrl.setAttribute('rel', 'noopener noreferrer');
             console.log('[DEBUG] Source URL set to:', targetUrl);
         } else {
             // Fall back to storage if not in session storage
             chrome.storage.local.get(['currentUrl'], function(result) {
-                if (result.currentUrl) {
+                if (result.currentUrl && isValidUrl(result.currentUrl)) {
                     sourceUrl.href = result.currentUrl;
+                    sourceUrl.setAttribute('target', '_blank');
+                    sourceUrl.setAttribute('rel', 'noopener noreferrer');
+                } else {
+                    // Hide the source link if no valid URL is found
+                    sourceUrl.parentElement.style.display = 'none';
                 }
             });
         }
+    }
+}
+
+// Helper function to validate URLs
+function isValidUrl(string) {
+    try {
+        const url = new URL(string);
+        return ['http:', 'https:'].includes(url.protocol);
+    } catch (_) {
+        return false;
     }
 }
 

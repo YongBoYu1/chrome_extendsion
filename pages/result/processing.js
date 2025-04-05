@@ -21,7 +21,14 @@ export function updateProcessingStatus(state) {
     if (state.stage === 'completed') {
         console.log('[DEBUG] Processing completed, loading latest content...');
         hideProcessingUI();
-        loadAndDisplayLatestContent();
+        // Add a small delay to ensure state is fully saved before loading content
+        setTimeout(() => {
+            loadAndDisplayLatestContent()
+                .catch(err => {
+                    console.error('[ERROR] Failed to load latest content:', err);
+                    showError('Failed to load processed content. Please try refreshing the page.');
+                });
+        }, 300);
     } else if (state.stage === 'error') {
         console.error('[ERROR] Processing error:', state.statusText);
         showError(state.statusText || 'An error occurred during processing');
@@ -35,7 +42,11 @@ export function setupProcessingMessageListener() {
     const targetUrl = sessionStorage.getItem('targetUrl');
     console.log('[DEBUG] Setting up listener for URL:', targetUrl);
     
-    chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    // Ensure any existing listener is removed first to prevent duplicates
+    chrome.runtime.onMessage.removeListener(processMessageHandler);
+    chrome.runtime.onMessage.addListener(processMessageHandler);
+    
+    function processMessageHandler(message, sender, sendResponse) {
         console.log('[DEBUG] Result page received message:', message);
         
         if (message.type === 'processing_update') {
@@ -43,7 +54,7 @@ export function setupProcessingMessageListener() {
             if (targetUrl && message.state && message.state.url !== targetUrl) {
                 console.log('[DEBUG] Ignoring update for different URL:', message.state.url);
                 sendResponse({ received: true, ignored: true });
-                return;
+                return true;
             }
             
             console.log('[DEBUG] Processing update received:', {
@@ -54,20 +65,33 @@ export function setupProcessingMessageListener() {
             
             if (!message.state) {
                 console.error('[ERROR] Processing update missing state object');
-                return;
+                sendResponse({ received: true, error: 'Missing state object' });
+                return true;
             }
             
             try {
                 updateProcessingStatus(message.state);
                 console.log('[DEBUG] Processing status updated successfully');
+                
+                // If processing is complete but we don't see content yet, try to load it directly
+                if (message.state.stage === 'completed') {
+                    console.log('[DEBUG] Confirming content is displayed after completion');
+                    setTimeout(() => {
+                        loadAndDisplayLatestContent()
+                            .catch(err => console.error('[ERROR] Fallback content loading failed:', err));
+                    }, 500);
+                }
             } catch (error) {
                 console.error('[ERROR] Failed to update processing status:', error);
+                sendResponse({ received: true, error: error.message });
+                return true;
             }
         }
         
         // Always send a response
         sendResponse({ received: true });
-    });
+        return true; // Keep the message channel open for asynchronous response
+    }
 }
 
 export function registerWithBackgroundScript() {
@@ -88,6 +112,17 @@ export function registerWithBackgroundScript() {
         
         if (response && response.acknowledged) {
             console.log('[DEBUG] Successfully registered with background script for URL:', targetUrl);
+            
+            // Check if processing is already completed for this URL
+            storageManager.getProcessingState().then(state => {
+                if (state && state.url === targetUrl && state.stage === 'completed') {
+                    console.log('[DEBUG] Processing already completed for this URL, loading content...');
+                    hideProcessingUI();
+                    loadAndDisplayLatestContent();
+                }
+            }).catch(err => {
+                console.error('[ERROR] Failed to check processing state:', err);
+            });
         }
     });
 }

@@ -307,18 +307,14 @@
         }
     </style>
     <link rel="icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIj48cGF0aCBmaWxsPSIjNDI4NWY0IiBkPSJNNDIwLjU1IDEwNi41MUM0MjcuODUgMTA2LjUxIDQzMy43NSAxMTIuNDEgNDMzLjc1IDExOS43MVYzOTIuM0M0MzMuNzUgMzk5LjYgNDI3Ljg1IDQwNS41IDQyMC41NSA0MDUuNUg5MS40NUM4NC4xNSA0MDUuNSA3OC4yNSAzOTkuNiA3OC4yNSAzOTIuM1YxMTkuNzFDNzguMjUgMTEyLjQxIDg0LjE1IDEwNi41MSA5MS40NSAxMDYuNTFINDIwLjU1TTE5MC45MSAyMjYuNUgzMjEuMDlDMzI3Ljc0IDIyNi41IDMzMy4xMyAyMjEuMTEgMzMzLjEzIDIxNC40NEMzMzMuMTMgMjA3Ljc3IDMyNy43NCAyMDIuMzggMzIxLjA5IDIwMi4zOEgxOTAuOTFDMTg0LjI2IDIwMi4zOCAxNzguODcgMjA3Ljc3IDE3OC44NyAyMTQuNDRDMTc4Ljg3IDIyMS4xMSAxODQuMjYgMjI2LjUgMTkwLjkxIDIyNi41Wk0xOTAuOTEgMTc1LjM0SDMyMS4wOUMzMjcuNzQgMTc1LjM0IDMzMy4xMyAxNjkuOTUgMzMzLjEzIDE2My4yOEMzMzMuMTMgMTU2LjYxIDMyNy43NCAxNTEuMjIgMzIxLjA5IDE1MS4yMkgxOTAuOTFDMTg0LjI2IDE1MS4yMiAxNzguODcgMTU2LjYxIDE3OC44NyAxNjMuMjhDMTc4Ljg3IDE2OS45NSAxODQuMjYgMTc1LjM0IDE5MC45MSAxNzUuMzRaTTE5MC45MSAzMjguODFIMjgwLjA0QzI4Ni42OSAzMjguODEgMjkyLjA4IDMyMy40MiAyOTIuMDggMzE2Ljc5QzI5Mi4wOCAzMTAuMDggMjg2LjY5IDMwNC42OSAyODAuMDQgMzA0LjY5SDE5MC45MUMxODQuMjYgMzA0LjY5IDE3OC44NyAzMTAuMDggMTc4Ljg3IDMxNi43NUMxNzguODcgMzIzLjQyIDE4NC4yNiAzMjguODEgMTkwLjkxIDMyOC44MVpNMTkwLjkxIDI3Ny42NkgzMjEuMDlDMzI3Ljc0IDI3Ny42NiAzMzMuMTMgMjcyLjI3IDMzMy4xMyAyNjUuNkMzMzMuMTMgMjU4LjkzIDMyNy43NCAyNTMuNTQgMzIxLjA5IDI1My41NEgxOTAuOTFDMTg0LjI2IDI1My41NCAxNzguODcgMjU4LjkzIDE3OC44NyAyNjUuNkMxNzguODcgMjcyLjI3IDE4NC4yNiAyNzcuNjYgMTkwLjkxIDI3Ny42NloiLz48Y2lyY2xlIGN4PSIzNjAiIGN5PSIzMzAiIHI9IjY1IiBmaWxsPSIjNDI4NWY0IiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjEwIi8+PHRleHQgeD0iMzQyIiB5PSIzNTAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjQwIiBmb250LXdlaWdodD0iYm9sZCIgZmlsbD0id2hpdGUiPuKchTwvdGV4dD48L3N2Zz4=" type="image/svg+xml">
-    <!-- Add static script imports -->
-    <script src="../scripts/utils.js"></script>
-    <script src="../scripts/error-handler.js"></script>
-    <script src="../scripts/content-processor.js"></script>
-    <script src="../scripts/ui-controller.js"></script>
+    <!-- Remove non-existent script imports -->
     <link rel="stylesheet" href="result/styles.css">
     <link rel="stylesheet" href="tailwind-output.css">
 </head>
 <body class="bg-gray-50 dark:bg-gray-900">
     <header class="sticky top-0 z-10 bg-white dark:bg-gray-800 shadow-sm py-2 px-4 mb-4">
         <div class="max-w-7xl mx-auto">
-            <!-- Replace the old header content with the new top panel -->
+            <!-- Improved header with better navigation -->
             <div class="top-panel">
                 <div class="flex items-center">
                     <a href="#" id="backBtn" class="back-button">
@@ -336,7 +332,7 @@
                             <polyline points="15 3 21 3 21 9"></polyline>
                             <line x1="10" y1="14" x2="21" y2="3"></line>
                         </svg>
-                        Source
+                        View Original Page
                     </a>
                 </div>
             </div>
@@ -346,14 +342,14 @@
     <!-- Main layout with sidebar and content area -->
     <div id="resultContainer" class="flex flex-col lg:flex-row max-w-7xl mx-auto px-4 pt-4 pb-12 gap-6">
         <aside class="lg:sticky lg:top-24 lg:w-72 lg:flex-shrink-0 lg:self-start">
-            <!-- Sidebar content with improved spacing -->
-            <div id="tocContainer" class="rounded-lg shadow-sm p-4 bg-white dark:bg-gray-800">
-                <h3 class="font-semibold text-gray-800 dark:text-gray-200 mb-4">Contents</h3>
+            <!-- Improved sidebar with better visual hierarchy -->
+            <div id="tocContainer" class="rounded-lg shadow bg-white dark:bg-gray-800">
+                <h3 class="font-semibold text-gray-800 dark:text-gray-200 mb-4 text-lg">Contents</h3>
                 <ul id="tocList" class="toc-list mb-6"></ul>
                 
-                <!-- Reading Stats Section with improved design -->
+                <!-- Enhanced Reading Stats Section -->
                 <div class="border-t border-gray-100 dark:border-gray-700 pt-4 mb-4">
-                    <h3 class="font-semibold text-gray-800 dark:text-gray-200 mb-3">Reading Stats</h3>
+                    <h3 class="font-semibold text-gray-800 dark:text-gray-200 mb-3 text-lg">Reading Stats</h3>
                     <div class="reading-stats-container">
                         <div class="reading-stats-item">
                             <div class="reading-stats-icon">
@@ -371,8 +367,6 @@
                             <div class="reading-stats-icon">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                     <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-                                    <line x1="9" y1="10" x2="15" y2="10"></line>
-                                    <line x1="12" y1="7" x2="12" y2="13"></line>
                                 </svg>
                             </div>
                             <div>
@@ -383,9 +377,9 @@
                     </div>
                 </div>
                 
-                <!-- Key Takeaways with consistent styling -->
+                <!-- Enhanced Key Takeaways with better visual cues -->
                 <div id="mainKeyTakeaways">
-                    <h3 class="font-semibold text-gray-800 dark:text-gray-200 mb-3">Key Takeaways</h3>
+                    <h3 class="font-semibold text-gray-800 dark:text-gray-200 mb-3 text-lg">Key Takeaways</h3>
                     <ul id="mainKeyTakeawaysList" class="key-takeaways-list"></ul>
                 </div>
             </div>
@@ -393,53 +387,88 @@
         
         <!-- Main content area -->
         <main class="flex-1">
-            <!-- Processing container -->
-            <div id="processingContainer" class="processing-container hidden">
-                <h2 id="processingTitle" class="text-xl font-semibold text-gray-900 dark:text-gray-100">Processing Your Content</h2>
-                <p id="processingStatus" class="text-gray-600 dark:text-gray-300 text-center">Analyzing content and generating insights...</p>
+            <!-- Improved Processing container with better visual feedback -->
+            <div id="processingContainer" class="processing-container hidden bg-white dark:bg-gray-800 rounded-lg shadow p-8">
+                <h2 id="processingTitle" class="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4 text-center">Processing Your Content</h2>
+                <p id="processingStatus" class="text-gray-600 dark:text-gray-300 text-center mb-6">Analyzing content and generating insights...</p>
                 
-                <div class="processing-steps">
+                <!-- Improved processing steps visualization -->
+                <div class="processing-steps my-8">
                     <div id="processing-step-extract" class="processing-step pending">
-                        <div class="step-indicator-processing">1</div>
-                        <span class="text-sm font-medium">Extracting content</span>
+                        <div class="step-indicator-processing flex items-center justify-center">
+                            <span>1</span>
+                        </div>
+                        <div>
+                            <span class="text-sm font-medium">Extracting content</span>
+                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Retrieving information from the page</p>
+                        </div>
                     </div>
+                    
+                    <div class="processing-step-connector"></div>
+                    
                     <div id="processing-step-analyze" class="processing-step pending">
-                        <div class="step-indicator-processing">2</div>
-                        <span class="text-sm font-medium">Analyzing structure</span>
+                        <div class="step-indicator-processing flex items-center justify-center">
+                            <span>2</span>
+                        </div>
+                        <div>
+                            <span class="text-sm font-medium">Analyzing structure</span>
+                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Identifying key sections and components</p>
+                        </div>
                     </div>
+                    
+                    <div class="processing-step-connector"></div>
+                    
                     <div id="processing-step-generate" class="processing-step pending">
-                        <div class="step-indicator-processing">3</div>
-                        <span class="text-sm font-medium">Generating summary</span>
+                        <div class="step-indicator-processing flex items-center justify-center">
+                            <span>3</span>
+                        </div>
+                        <div>
+                            <span class="text-sm font-medium">Generating summary</span>
+                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Creating concise overview of content</p>
+                        </div>
                     </div>
                 </div>
                 
+                <!-- Enhanced progress bar -->
                 <div id="processingProgress" class="processing-progress">
                     <div id="progressBar" class="progress-bar" style="width: 0%"></div>
                 </div>
                 
-                <button id="cancelProcessingBtn" class="mt-4 px-4 py-2 bg-white border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-600">
+                <!-- Improved cancel button -->
+                <button id="cancelProcessingBtn" class="cancel-button mt-6 px-4 py-2 bg-gray-100 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 transition-colors dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-600">
                     Cancel
                 </button>
             </div>
             
-            <!-- Content container -->
+            <!-- Content container with improved spacing -->
             <div id="contentContainer" class="bg-white dark:bg-gray-800 rounded-lg shadow p-6 prose dark:prose-invert max-w-none">
                 <!-- Content will be added here -->
                 <div id="summaryContainer" class="summary-container"></div>
             </div>
             
-            <!-- Error container -->
-            <div id="errorContainer" class="bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 p-6 rounded-lg mb-6 hidden">
-                <div class="flex">
-                    <div class="flex-shrink-0">
+            <!-- Enhanced error container with better troubleshooting options -->
+            <div id="errorContainer" class="hidden bg-white dark:bg-gray-800 rounded-lg shadow p-6 border-l-4 border-red-500">
+                <div class="flex items-start">
+                    <div class="flex-shrink-0 mt-1">
                         <svg class="h-6 w-6 text-red-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
                             <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
                         </svg>
                     </div>
-                    <div class="ml-4">
-                        <h3 class="text-lg font-medium text-red-800 dark:text-red-200" id="errorTitle">Error Processing Content</h3>
+                    <div class="ml-4 flex-1">
+                        <h3 class="text-lg font-medium text-red-800 dark:text-red-200" id="errorTitle">Processing Error</h3>
                         <p class="mt-2 text-red-700 dark:text-red-300" id="errorMessage"></p>
-                        <button id="retryBtn" class="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition duration-150">Retry</button>
+                        <div class="mt-4 flex gap-3">
+                            <button id="retryBtn" class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2">Retry</button>
+                            <button id="reportErrorBtn" class="px-4 py-2 bg-white text-gray-700 border border-gray-300 rounded hover:bg-gray-50 transition-colors focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 dark:bg-gray-700 dark:text-gray-200 dark:border-gray-600 dark:hover:bg-gray-600">Report Issue</button>
+                        </div>
+                        <div class="mt-4 text-sm text-gray-500 dark:text-gray-400">
+                            <p>You can also try:</p>
+                            <ul class="list-disc pl-5 mt-2 space-y-1">
+                                <li>Refreshing the page</li>
+                                <li>Checking your internet connection</li>
+                                <li>Processing a different page</li>
+                            </ul>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -447,7 +476,7 @@
     </div>
     
     <!-- Back to top button -->
-    <button id="backToTopBtn" class="fixed bottom-6 right-6 bg-blue-500 text-white rounded-full p-3 shadow-lg hover:bg-blue-600 transition duration-150 hidden">
+    <button id="backToTopBtn" class="fixed bottom-6 right-6 bg-blue-500 text-white rounded-full p-3 shadow-lg hover:bg-blue-600 transition-colors duration-150 hidden">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" />
         </svg>

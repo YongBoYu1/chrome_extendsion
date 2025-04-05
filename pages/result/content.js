@@ -5,51 +5,125 @@
 import { storageManager } from '../../utils/storage.js';
 import { escapeHtml, formatReadingTime, showError, hideError, setUIState, UIState } from './ui.js';
 
-function renderMarkdown(markdown) {
-    if (!markdown) return '';
-    
-    console.log('[DEBUG] Rendering markdown, first 100 chars:', markdown.substring(0, 100).replace(/\n/g, '\\n'));
+/**
+ * Renders markdown content to HTML
+ * @param {string} markdown - Markdown content to render
+ * @returns {string} - HTML result
+ */
+export function renderMarkdown(markdown) {
+    if (!markdown) {
+        console.warn('[WARN] Empty markdown provided to renderMarkdown');
+        return '';
+    }
 
-    // First split into sections by double newlines
-    const sections = markdown.split('\n\n').map(section => section.trim()).filter(section => section);
+    console.log('[DEBUG] Rendering markdown...');
+
+    // Split markdown into sections
+    const sections = markdown.split('\n\n');
     
-    return sections.map(section => {
-        // Check if this section is a list
-        if (section.split('\n').every(line => line.trim().startsWith('*') || line.trim().startsWith('-'))) {
-            const items = section
-                .split('\n')
-                .map(line => line.trim())
-                .filter(line => line)
-                .map(line => line.substring(1).trim()); // Remove the * or -
+    // Process each section
+    let inKeyPointsSection = false;
+    let keyPointItems = [];
+    let processedSections = [];
+    let followingKeyPointsParagraph = null;
+    
+    for (let i = 0; i < sections.length; i++) {
+        const section = sections[i].trim();
+        if (!section) continue;
+        
+        // Check if this is a Key Points section header
+        if (/^\s*Key\s+Points:?\*?\s*$/i.test(section)) {
+            inKeyPointsSection = true;
+            processedSections.push(processSpecialSection(section));
             
-            return `<ul class="list-disc pl-5 space-y-2 my-4">
-                ${items.map(item => `<li class="text-gray-800 dark:text-gray-200">${processMarkdownInline(item)}</li>`).join('\n')}
-            </ul>`;
+            // Check if the next section might be a paragraph of key points
+            if (i + 1 < sections.length) {
+                followingKeyPointsParagraph = sections[i + 1].trim();
+            }
+            continue;
         }
         
-        // Check for headers with markdown ** formatting
-        if (section.includes('**') && section.match(/\*\*([^*]+):\*\*/)) {
-            // This appears to be a section with bold headers like "**Classification:**"
-            return processSpecialSection(section);
+        // If we're in the Key Points section, handle content
+        if (inKeyPointsSection) {
+            // Case 1: It's a bullet point list (starts with * or -)
+            if (section.trim().match(/^\s*[\*\-]\s+/)) {
+                // Process bullet points
+                const bulletPoints = section.split('\n');
+                bulletPoints.forEach(point => {
+                    if (point.trim()) {
+                        keyPointItems.push(point.trim());
+                    }
+                });
+                continue;
+            } 
+            // Case 2: It's a paragraph that follows the Key Points header and we haven't processed bullet points yet
+            else if (keyPointItems.length === 0 && section === followingKeyPointsParagraph) {
+                // Split paragraph into sentences and convert to bullet points
+                const sentences = section.match(/[^.!?]+[.!?]+/g) || [section];
+                sentences.forEach(sentence => {
+                    if (sentence.trim()) {
+                        keyPointItems.push('* ' + sentence.trim());
+                    }
+                });
+                followingKeyPointsParagraph = null;
+                i++; // Skip this section since we've processed it
+                continue;
+            }
+            // Case 3: It's a paragraph but we haven't found any bullet points yet
+            else if (keyPointItems.length === 0) {
+                // Treat the entire section as a single bullet point
+                keyPointItems.push('* ' + section);
+                continue;
+            }
+            // Case 4: We've reached the end of the key points section
+            else if (keyPointItems.length > 0) {
+                // Render the bullet list before continuing
+                renderKeyPointsList();
+                inKeyPointsSection = false;
+            }
         }
         
-        // Check for headers
-        if (section.startsWith('# ')) {
-            return `<h1 class="text-3xl font-bold text-gray-900 dark:text-gray-100 my-6">${section.substring(2)}</h1>`;
-        }
-        if (section.startsWith('## ')) {
-            return `<h2 class="text-2xl font-bold text-gray-800 dark:text-gray-200 my-4">${section.substring(3)}</h2>`;
-        }
-        if (section.startsWith('### ')) {
-            return `<h3 class="text-xl font-bold text-gray-700 dark:text-gray-300 my-3">${section.substring(4)}</h3>`;
-        }
-        
-        // Regular paragraph
-        return `<p class="text-gray-700 dark:text-gray-300 my-3">${processMarkdownInline(section)}</p>`;
-    }).join('\n');
+        // Normal section processing
+        processedSections.push(processSpecialSection(section));
+    }
+    
+    // If we still have key points at the end of processing, render them
+    if (inKeyPointsSection && keyPointItems.length > 0) {
+        renderKeyPointsList();
+    }
+    
+    function renderKeyPointsList() {
+        const bulletList = `<ul class="list-disc pl-6 space-y-2 mb-6">
+            ${keyPointItems.map(item => {
+                // Remove the bullet character (* or -) and clean it
+                const cleanItem = item.replace(/^\s*[\*\-]\s*/, '');
+                return `<li class="text-gray-700 dark:text-gray-300">${processMarkdownInline(cleanItem)}</li>`;
+            }).join('\n')}
+        </ul>`;
+        processedSections.push(bulletList);
+        keyPointItems = [];
+    }
+
+    return processedSections.join('\n');
 }
 
-// Helper function to process markdown formatting within a line (bold, italic, etc.)
+/**
+ * Generates a valid ID from heading text for anchor links
+ * @param {string} text - Heading text
+ * @returns {string} Valid ID for HTML
+ */
+function generateHeadingId(text) {
+    return text
+        .toLowerCase()
+        .replace(/[^\w\s-]/g, '')
+        .replace(/\s+/g, '-');
+}
+
+/**
+ * Processes inline markdown formatting
+ * @param {string} text - Raw text with markdown formatting
+ * @returns {string} HTML with formatting applied
+ */
 function processMarkdownInline(text) {
     // Handle bold text (**text**)
     text = text.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
@@ -63,24 +137,133 @@ function processMarkdownInline(text) {
     return text;
 }
 
-// Helper function to process special sections with bold headers
+/**
+ * Processes special sections with specific formatting
+ * @param {string} section - The section to process
+ * @returns {string} - Processed section HTML
+ */
 function processSpecialSection(section) {
-    // Handle the pattern **Header:** Content
-    if (section.match(/^\*\*([^*:]+):\*\*(.*)/s)) {
-        const matches = section.match(/^\*\*([^*:]+):\*\*(.*)/s);
-        const header = matches[1].trim();
-        const content = matches[2].trim();
-        
-        return `<div class="my-4">
-            <h4 class="font-bold text-gray-800 dark:text-gray-200 inline">${header}:</h4>
-            <span class="text-gray-700 dark:text-gray-300 ml-1">${processMarkdownInline(content)}</span>
-        </div>`;
+    // Handle standard markdown headers
+    if (section.startsWith('# ')) {
+        const headerText = section.substring(2).trim();
+        const headerId = headerText.toLowerCase().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-');
+        return `<h1 class="text-3xl font-bold text-gray-900 dark:text-gray-100 mt-8 mb-4" id="${headerId}">${headerText}</h1>`;
     }
     
-    // Regular processing for sections with bold text
+    if (section.startsWith('## ')) {
+        const headerText = section.substring(3).trim();
+        const headerId = headerText.toLowerCase().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-');
+        return `<h2 class="text-2xl font-bold text-gray-800 dark:text-gray-200 mt-6 mb-3" id="${headerId}">${headerText}</h2>`;
+    }
+    
+    if (section.startsWith('### ')) {
+        const headerText = section.substring(4).trim();
+        const headerId = headerText.toLowerCase().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-');
+        return `<h3 class="text-xl font-bold text-gray-700 dark:text-gray-300 mt-5 mb-3" id="${headerId}">${headerText}</h3>`;
+    }
+    
+    // Pattern 1: Standalone header with or without trailing asterisk
+    // Example: "**Header:**" or "**Header:*"
+    const headerStandalonePattern = /^\s*\*\*(.*?):\*\*?\s*$/;
+    
+    // Pattern 2: Header followed by content 
+    // Example: "**Header:** Content"
+    const headerWithContentPattern = /^\s*\*\*(.*?):\*\*\s+(.*)/;
+    
+    // Pattern 3: Header with asterisk followed by content
+    // Example: "**Header:* Content
+    const headerWithAsteriskPattern = /^\s*\*\*(.*?):\*\s+(.*)/;
+    
+    // Special pattern for Key Points section
+    const keyPointsPattern = /^\s*Key\s+Points:?\*?\s*$/i;
+
+    // Check for Key Points special pattern first
+    if (keyPointsPattern.test(section)) {
+        const sectionId = 'key-points';
+        return `<h3 class="text-xl font-bold text-gray-800 dark:text-gray-200 mt-6 mb-3" id="${sectionId}">Key Points</h3>`;
+    }
+    // Check for Pattern 1 (standalone header)
+    else if (headerStandalonePattern.test(section)) {
+        const match = section.match(headerStandalonePattern);
+        const headerText = match[1].trim();
+        // Generate kebab-case ID from header text
+        const sectionId = headerText.toLowerCase().replace(/\s+/g, '-');
+        
+        return `<h3 class="text-xl font-bold text-gray-800 dark:text-gray-200 mt-6 mb-3" id="${sectionId}">${headerText}</h3>`;
+    }
+    // Check for Pattern 2 (header with content)
+    else if (headerWithContentPattern.test(section)) {
+        const match = section.match(headerWithContentPattern);
+        const headerText = match[1].trim();
+        const contentText = match[2].trim();
+        // Generate kebab-case ID from header text
+        const sectionId = headerText.toLowerCase().replace(/\s+/g, '-');
+        
+        return `<h3 class="text-xl font-bold text-gray-800 dark:text-gray-200 mt-6 mb-3" id="${sectionId}">${headerText}</h3>
+            <div class="text-gray-700 dark:text-gray-300 mb-4">
+                <p>${processMarkdownInline(contentText)}</p>
+            </div>`;
+    }
+    // Check for Pattern 3 (header with asterisk followed by content)
+    else if (headerWithAsteriskPattern.test(section)) {
+        const match = section.match(headerWithAsteriskPattern);
+        const headerText = match[1].trim();
+        const contentText = match[2].trim();
+        // Generate kebab-case ID from header text
+        const sectionId = headerText.toLowerCase().replace(/\s+/g, '-');
+        
+        return `<h3 class="text-xl font-bold text-gray-800 dark:text-gray-200 mt-6 mb-3" id="${sectionId}">${headerText}</h3>
+            <div class="text-gray-700 dark:text-gray-300 mb-4">
+                <p>${processMarkdownInline(contentText)}</p>
+            </div>`;
+    }
+    // Default: Not a special section, process with markdown
     return `<p class="text-gray-700 dark:text-gray-300 my-3">${processMarkdownInline(section)}</p>`;
 }
 
+/**
+ * Loads and displays the latest content for this tab
+ */
+export async function loadAndDisplayLatestContent() {
+    try {
+        // Get the URL this tab is responsible for
+        const targetUrl = sessionStorage.getItem('targetUrl');
+        
+        // Get all available content
+        const contents = await storageManager.getAllContent();
+        
+        // Find content matching tab URL
+        let contentToDisplay = null;
+        if (targetUrl) {
+            contentToDisplay = contents.find(item => item.url === targetUrl);
+        }
+        
+        // Fall back to most recent if no match
+        if (!contentToDisplay && contents.length > 0) {
+            contentToDisplay = contents[0];
+        }
+        
+        if (!contentToDisplay) {
+            console.error('[ERROR] No content available to display');
+            showError('No content available. Please try processing a page first.');
+            return;
+        }
+        
+        // Create immutable copy to prevent race conditions
+        const contentCopy = JSON.parse(JSON.stringify(contentToDisplay));
+        
+        // Display the content
+        await displayProcessedContent(contentCopy);
+    } catch (error) {
+        console.error('[ERROR] Failed to load content:', error);
+        showError('Failed to load content: ' + error.message);
+    }
+}
+
+/**
+ * Displays processed content in the UI
+ * @param {Object} content - Content object with title, markdown, html, etc.
+ */
 export async function displayProcessedContent(content) {
     console.log('[DEBUG] Displaying processed content:', {
         hasHtml: !!content.html,
@@ -153,10 +336,38 @@ export async function displayProcessedContent(content) {
     // Switch to content state
     setUIState(UIState.CONTENT);
 
+    // Setup back to top button
+    setupBackToTopButton();
+
     console.log('[DEBUG] Content displayed successfully');
 }
 
-// Function to update sidebar contents
+/**
+ * Sets up the back to top button functionality
+ */
+function setupBackToTopButton() {
+    const backToTopBtn = document.getElementById('backToTopBtn');
+    if (!backToTopBtn) return;
+    
+    // Show button when scrolled down
+    window.addEventListener('scroll', () => {
+        if (window.scrollY > 300) {
+            backToTopBtn.classList.remove('hidden');
+        } else {
+            backToTopBtn.classList.add('hidden');
+        }
+    });
+    
+    // Scroll to top when clicked
+    backToTopBtn.addEventListener('click', () => {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+}
+
+/**
+ * Updates all sidebar components
+ * @param {Object} content - Content object
+ */
 function updateSidebar(content) {
     // Update the TOC list
     updateTableOfContents();
@@ -168,6 +379,9 @@ function updateSidebar(content) {
     updateKeyTakeaways(content);
 }
 
+/**
+ * Updates the table of contents based on headings in the content
+ */
 function updateTableOfContents() {
     const tocList = document.getElementById('tocList');
     if (!tocList) return;
@@ -179,26 +393,86 @@ function updateTableOfContents() {
     const contentContainer = document.getElementById('contentContainer');
     if (!contentContainer) return;
     
+    // Include h3 elements (section headers) in the table of contents
     const headers = contentContainer.querySelectorAll('h1, h2, h3');
-    if (headers.length === 0) return;
+    if (headers.length === 0) {
+        // If no headers, show a message
+        tocList.innerHTML = '<li class="text-gray-500 italic text-sm p-2">No sections available</li>';
+        return;
+    }
     
     // Create TOC entries
-    headers.forEach((header, index) => {
-        const id = `section-${index}`;
-        header.id = id;
+    headers.forEach((header) => {
+        // If header doesn't have an ID, generate one
+        if (!header.id) {
+            header.id = header.textContent.toLowerCase().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-');
+        }
         
         const tocItem = document.createElement('li');
         const level = parseInt(header.tagName.substring(1)) - 1; // H1 = 0, H2 = 1, H3 = 2
         
         tocItem.innerHTML = `
-            <a href="#${id}" class="toc-item level-${level} pl-${level * 2} block py-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
+            <a href="#${header.id}" class="toc-item level-${level} ${level > 0 ? `ml-${level * 2}` : ''} block py-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded px-2">
                 ${header.textContent}
             </a>
         `;
         tocList.appendChild(tocItem);
     });
+    
+    // Add scroll highlighting for active section
+    if (headers.length > 0) {
+        setupTocHighlighting(headers);
+    }
 }
 
+/**
+ * Sets up highlighting for the active section in the table of contents
+ * @param {NodeList} headers - List of header elements
+ */
+function setupTocHighlighting(headers) {
+    if (headers.length === 0) return;
+    
+    // Convert NodeList to Array for easier manipulation
+    const headerElements = Array.from(headers);
+    
+    // Get all TOC links
+    const tocLinks = document.querySelectorAll('#tocList a');
+    
+    // Add scroll event listener
+    window.addEventListener('scroll', () => {
+        // Find the current active header based on scroll position
+        const scrollPosition = window.scrollY + 100; // Add offset for better UX
+        
+        // Find the current section
+        let currentSection = headerElements[0];
+        
+        for (const header of headerElements) {
+            if (header.offsetTop <= scrollPosition) {
+                currentSection = header;
+            } else {
+                break;
+            }
+        }
+        
+        // Remove active class from all links
+        tocLinks.forEach(link => {
+            link.classList.remove('active');
+        });
+        
+        // Add active class to current section link
+        if (currentSection && currentSection.id) {
+            const activeLink = document.querySelector(`#tocList a[href="#${currentSection.id}"]`);
+            if (activeLink) {
+                activeLink.classList.add('active');
+            }
+        }
+    });
+}
+
+/**
+ * Updates reading stats in the sidebar
+ * @param {Object} content - Content object
+ */
 function updateReadingStats(content) {
     // Update reading time
     const readingTimeValue = document.getElementById('readingTimeValue');
@@ -208,15 +482,24 @@ function updateReadingStats(content) {
     
     // Update word count
     const wordCountValue = document.getElementById('wordCountValue');
-    if (wordCountValue && content.wordCount) {
-        wordCountValue.textContent = content.wordCount;
-    } else if (wordCountValue && content.summary) {
-        // Estimate word count from summary
-        const wordCount = content.summary.split(/\s+/).length;
-        wordCountValue.textContent = wordCount;
+    if (wordCountValue) {
+        if (content.wordCount) {
+            wordCountValue.textContent = content.wordCount;
+        } else if (content.summary || content.markdown) {
+            // Estimate word count from content
+            const text = content.markdown || content.summary || '';
+            const wordCount = text.split(/\s+/).length;
+            wordCountValue.textContent = wordCount;
+        } else {
+            wordCountValue.textContent = '0';
+        }
     }
 }
 
+/**
+ * Updates key takeaways in the sidebar
+ * @param {Object} content - Content object
+ */
 function updateKeyTakeaways(content) {
     const keyTakeawaysList = document.getElementById('mainKeyTakeawaysList');
     if (!keyTakeawaysList) {
@@ -239,7 +522,9 @@ function updateKeyTakeaways(content) {
         content.keyPoints.forEach(point => {
             const item = document.createElement('li');
             item.className = 'key-takeaways-item';
-            item.textContent = point;
+            // Remove leading bullet point characters (* or -) from the point text
+            const cleanedPoint = point.replace(/^\s*[\*\-]\s*/, '');
+            item.innerHTML = processMarkdownInline(cleanedPoint);
             keyTakeawaysList.appendChild(item);
         });
         return;
@@ -312,56 +597,5 @@ export async function loadContentById(contentId) {
     } catch (error) {
         console.error('Error loading content:', error);
         showError('Failed to load content');
-    }
-}
-
-export async function loadAndDisplayLatestContent() {
-    try {
-        // Get the URL this tab is responsible for
-        const targetUrl = sessionStorage.getItem('targetUrl');
-        console.log('[DEBUG] Loading content for URL:', targetUrl);
-        
-        if (!targetUrl) {
-            console.warn('[WARN] No target URL set for this tab');
-            // Continue with default behavior for backward compatibility
-        }
-        
-        // Get all available content
-        const contents = await storageManager.getAllContent();
-        if (!contents || contents.length === 0) {
-            console.error('[ERROR] No content found');
-            showError('No content available after processing');
-            return;
-        }
-        
-        // Try to find content for this tab's URL first
-        let contentToDisplay = null;
-        
-        if (targetUrl) {
-            contentToDisplay = contents.find(item => item.url === targetUrl);
-            
-            if (contentToDisplay) {
-                console.log('[DEBUG] Found content matching tab URL:', targetUrl);
-            } else {
-                console.log('[DEBUG] No content found for tab URL:', targetUrl);
-            }
-        }
-        
-        // If no matching content found or no target URL set, fall back to most recent
-        if (!contentToDisplay) {
-            // For backward compatibility, use the most recent content
-            contentToDisplay = contents[0];
-            console.log('[DEBUG] Using most recent content:', contentToDisplay.url);
-        }
-        
-        // Get a clean immutable copy to avoid race conditions during rendering
-        const contentCopy = JSON.parse(JSON.stringify(contentToDisplay));
-        
-        // Display the content
-        await displayProcessedContent(contentCopy);
-        
-    } catch (error) {
-        console.error('[ERROR] Failed to load content:', error);
-        showError('Failed to load processed content');
     }
 } 
