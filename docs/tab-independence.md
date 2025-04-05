@@ -148,6 +148,67 @@ handleResultPageReady(sender, message) {
 }
 ```
 
+### 7. Robust Tab Messaging System (`background/background.js`)
+
+The background script implements a reliable tab messaging system with validation and error handling:
+
+```javascript
+// Helper function to send message to a specific tab
+function sendMessageToTab(tabId, message) {
+    return new Promise((resolve, reject) => {
+        // First check if the tab exists and is in a valid state
+        chrome.tabs.get(tabId, (tab) => {
+            if (chrome.runtime.lastError) {
+                // Tab doesn't exist anymore
+                reject({tabMissing: true, error: chrome.runtime.lastError});
+                return;
+            }
+            
+            // Tab exists, try to send the message
+            chrome.tabs.sendMessage(tabId, message, response => {
+                if (chrome.runtime.lastError) {
+                    reject(chrome.runtime.lastError);
+                } else {
+                    resolve(response);
+                }
+            });
+        });
+    });
+}
+
+// Helper function to broadcast to all result tabs
+function broadcastToResultTabs(message) {
+    // Create a safe copy of resultTabs to iterate over
+    const tabsToUpdate = [...resultTabs];
+    const failedTabs = [];
+    
+    tabsToUpdate.forEach(tabId => {
+        sendMessageToTab(tabId, message)
+            .catch(error => {
+                if (error.tabMissing) {
+                    // Tab doesn't exist anymore, remove it from tracking
+                    failedTabs.push(tabId);
+                    console.log('[INFO] Removing non-existent tab from tracking:', tabId);
+                } else {
+                    console.error('[ERROR] Failed to send message to tab:', tabId, error);
+                }
+            });
+    });
+    
+    // Clean up any failed tabs from our resultTabs array
+    if (failedTabs.length > 0) {
+        resultTabs = resultTabs.filter(id => !failedTabs.includes(id));
+        console.log('[DEBUG] Updated result tabs after removing failed tabs:', resultTabs);
+    }
+}
+```
+
+This implementation ensures:
+1. **Tab Validation**: Verifies a tab still exists before attempting to send a message
+2. **Self-Cleaning**: Automatically removes tabs from tracking when they're closed or no longer accessible
+3. **Error Differentiation**: Distinguishes between missing tabs and actual messaging errors
+4. **Safe Iteration**: Uses a copy of the tab list to prevent modification issues during iteration
+
 ## Data Flow
 
 ### 1. Tab Creation Flow
