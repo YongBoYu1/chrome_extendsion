@@ -43,9 +43,10 @@ package-lock.json
 logs/
 scraped_content/
 scraped_content_simplified/
+scraped_content_debug/
+full_content_test/
 
 # API keys and sensitive data
-.env
 .env.local
 .env.development
 .env.test
@@ -57,7 +58,6 @@ config.local.js
 .vscode/
 *.swp
 *.swo
-.DS_Store
 .AppleDouble
 .LSOverride
 

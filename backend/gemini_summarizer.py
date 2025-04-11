@@ -7,6 +7,8 @@ Handles content summarization using Google's Gemini AI.
 import logging
 from typing import Dict, Optional
 import google.generativeai as genai
+import google.api_core.exceptions
+from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 from fastapi import HTTPException
 import re
 
@@ -33,6 +35,20 @@ class GeminiSummarizer:
             model_name=self.model_name,
             generation_config=self.generation_config
         )
+
+    # Define retry strategy for the Gemini API call
+    @retry(stop=stop_after_attempt(3),
+           wait=wait_exponential(multiplier=1, min=2, max=10),
+           # Retry on specific Google API transient errors
+           retry=retry_if_exception_type((google.api_core.exceptions.DeadlineExceeded,
+                                        google.api_core.exceptions.ServiceUnavailable,
+                                        google.api_core.exceptions.ResourceExhausted)), # ResourceExhausted often indicates rate limits
+           reraise=True)
+    def _generate_with_retry(self, model, prompt: str):
+        """Internal method to make the Gemini API call with retries."""
+        logger.debug("Calling Gemini model.generate_content")
+        response = model.generate_content(prompt)
+        return response
 
     async def summarize(self, content: str, title: Optional[str] = None, max_length: int = 1000) -> Dict:
         """Generate a summary using Gemini AI"""
@@ -75,8 +91,8 @@ Each bullet point should be concise and start with "*" or "-".
             
             logger.info("Sending content to Gemini for summarization")
             
-            # Generate summary
-            response = model.generate_content(prompt)
+            # Call internal method with retry logic
+            response = self._generate_with_retry(model, prompt)
             summary = response.text
             
             logger.info(f"Gemini summary generated successfully. Summary length: {len(summary)}")
@@ -99,6 +115,12 @@ Each bullet point should be concise and start with "*" or "-".
                 "keyPoints": key_points
             }
             
-        except Exception as e:
-            logger.error(f"Error generating summary with Gemini: {str(e)}")
-            raise HTTPException(status_code=500, detail=f"Failed to generate summary: {str(e)}") 
+        # Catch specific Google API exceptions if retries fail
+        except google.api_core.exceptions.GoogleAPICallError as e:
+            logger.error(f"Error generating summary with Gemini after retries: {str(e)}")
+            # Map specific errors to potentially different HTTP statuses if desired
+            # Example: if isinstance(e, google.api_core.exceptions.ResourceExhausted): ...
+            raise HTTPException(status_code=502, detail=f"Failed to generate summary (Gemini API error): {str(e)}")
+        except Exception as e: # Catch any other unexpected errors
+            logger.error(f"Unexpected error generating summary with Gemini: {str(e)}")
+            raise HTTPException(status_code=500, detail=f"Unexpected error during summary generation: {str(e)}") 

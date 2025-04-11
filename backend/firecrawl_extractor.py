@@ -7,6 +7,8 @@ import re
 from typing import Dict, List, Optional, Any
 import requests
 import time
+from cookie_handler import cookie_handler # Import the singleton instance
+from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 
 # Configure basic logging
 logging.basicConfig(level=logging.INFO, # Changed from DEBUG to INFO for better performance
@@ -14,7 +16,7 @@ logging.basicConfig(level=logging.INFO, # Changed from DEBUG to INFO for better 
 logger = logging.getLogger(__name__)
 
 # --- Simplified Constants ---
-DEFAULT_USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36 PythonSimplifiedTest/1.0' # Modified UA slightly
+DEFAULT_USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36' # Modified UA slightly
 
 # --- Simplified Sanitizer ---
 def sanitize_filename(text: str, max_len: int = 100) -> str:
@@ -52,130 +54,31 @@ class FireCrawlExtractor:
             except OSError as e:
                 logger.error(f"Failed to create directory {scrape_dir}: {e}")
 
-    def _save_simplified_result(self, url: str, response_data: Dict[str, Any], status_code: int) -> None:
-        """Saves the raw API response for debugging."""
-        if not os.path.exists(self.scrape_dir):
-             logger.error(f"Scrape directory '{self.scrape_dir}' does not exist. Cannot save result.")
-             return
+    # Define retry strategy for the API call
+    @retry(stop=stop_after_attempt(3), # Retry 3 times
+           wait=wait_exponential(multiplier=1, min=2, max=10), # Wait 2s, 4s, 8s (max 10s)
+           retry=retry_if_exception_type((requests.exceptions.Timeout, requests.exceptions.ConnectionError)), # Retry only on Timeout or ConnectionError
+           reraise=True) # Reraise the exception if all retries fail
+    def _make_scrape_request(self, api_url: str, req_body: Dict[str, Any]) -> requests.Response:
+        """Internal method to make the actual HTTP POST request with retries."""
+        logger.debug(f"Making FireCrawl request to {api_url}")
+        response = requests.post(
+            api_url,
+            json=req_body,
+            headers=self.headers,
+            timeout=self.request_timeout
+        )
+        # Raise HTTPError for bad status codes (4xx or 5xx)
+        # We don't retry on these by default, but it makes handling clearer
+        response.raise_for_status()
+        return response
 
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        status = f"HTTP_{status_code}"
-        safe_url_part = sanitize_filename(url.split('//')[-1].replace('/', '_'), 50)
-        filename = f"{status}_{safe_url_part}_{timestamp}.json"
-        filepath = os.path.join(self.scrape_dir, filename)
-
-        save_content = {
-            '_debug_info': {
-                'original_url': url,
-                'scrape_timestamp_utc': datetime.now(timezone.utc).isoformat(),
-                'saved_filename': filename,
-                'response_status_code': status_code
-            },
-            'api_response': response_data
-        }
-
-        try:
-            with open(filepath, 'w', encoding='utf-8') as f:
-                json.dump(save_content, f, indent=2, ensure_ascii=False)
-            logger.info(f"Saved simplified API response to {filepath}")
-        except Exception as e:
-            logger.error(f"Failed to save simplified result to {filepath}: {str(e)}")
-
-    # --- scrape_simplified using the CONFIRMED Flattened Structure ---
-    async def scrape_simplified(self, url: str) -> Optional[Dict[str, Any]]:
-        """
-        Attempts a scrape with the confirmed minimal, flattened request body structure.
-        """
-        request_id = str(uuid.uuid4())[:8]
-        logger.info(f"[{request_id}] Initiating SIMPLIFIED scrape for URL: {url}")
-
-        api_url = f"{self.base_url}/scrape"
-
-        # --- CONFIRMED Flattened Request Body Structure ---
-        req_body: Dict[str, Any] = {
-            "url": url,
-            "formats": ["markdown", "html"],
-            "onlyMainContent": True,
-            "removeBase64Images": True,
-            "headers": {"User-Agent": DEFAULT_USER_AGENT},
-            "excludeTags": ["nav", "footer", "aside", "script", "style"],
-            "includeTags": [],
-            "timeout": 60000
-        }
-
-        # Add detailed request logging
-        # logger.debug(f"[{request_id}] Request URL: {api_url}")
-        # logger.debug(f"[{request_id}] Request Headers: {json.dumps(self.headers)}")
-        # logger.debug(f"[{request_id}] Request Body (Raw): {json.dumps(req_body, indent=2)}")
-
-        response_json = None
-        status_code = -1
-
-        try:
-            response = requests.post(
-                api_url,
-                json=req_body,
-                headers=self.headers,
-                timeout=self.request_timeout
-            )
-            status_code = response.status_code
-            
-            # Add response header logging
-            logger.info(f"[{request_id}] Response Status: {status_code}")
-            # logger.debug(f"[{request_id}] Response Headers: {dict(response.headers)}")
-
-            try:
-                response_json = response.json()
-                # Comment out logging full response for debugging to improve performance
-                # response_log_str = json.dumps(response_json, indent=2)
-                # logger.debug(f"[{request_id}] FireCrawl Response Body:\n{response_log_str}")
-            except json.JSONDecodeError:
-                logger.error(f"[{request_id}] Failed JSON decode. Status: {status_code}")
-                # Limit response text logging to reduce overhead
-                logger.error(f"[{request_id}] Raw Response Text: {response.text[:500]}")
-                response_json = {"_error": "JSON Decode Failed", "raw_body": response.text[:1000]}
-
-            # Save the raw response for inspection
-            # Commented out to improve performance
-            # self._save_simplified_result(url, response_json, status_code)
-
-            # Check for success
-            if 200 <= status_code < 300 and response_json.get('success') is True:
-                logger.info(f"[{request_id}] Simplified scrape SUCCESSFUL (HTTP {status_code}) for {url}")
-                # Ensure 'data' exists before returning it
-                if 'data' in response_json:
-                    return response_json.get('data')
-                else:
-                    logger.error(f"[{request_id}] API reported success but 'data' field missing in response.")
-                    return None
-            else:
-                error_msg = response_json.get('error', f'Unknown API error or success=false (HTTP {status_code})')
-                details = response_json.get('details', '')
-                logger.error(f"[{request_id}] Simplified scrape FAILED (HTTP {status_code}). Error: {error_msg}, Details: {details}")
-                return None
-
-        except requests.exceptions.Timeout:
-            logger.error(f"[{request_id}] Request timed out ({self.request_timeout}s) for URL: {url}")
-            # Commented out to improve performance
-            # self._save_simplified_result(url, {"_error": "Request Timeout"}, status_code=408)
-            return None
-        except requests.exceptions.RequestException as e:
-            logger.error(f"[{request_id}] Network error during request for {url}: {str(e)}", exc_info=True)
-            # Commented out to improve performance
-            # self._save_simplified_result(url, {"_error": f"Network Error: {e}"}, status_code=599)
-            return None
-        except Exception as e:
-            logger.exception(f"[{request_id}] Unexpected Python error during simplified scrape for {url}: {str(e)}")
-            # Commented out to improve performance
-            # self._save_simplified_result(url, {"_error": f"Unexpected Python Error: {e}"}, status_code=500)
-            return None
-
-    # Add the missing scrape method that was being called
     async def scrape(self, url: str, formats: List[str] = ["markdown", "html"],
-                    only_main_content: bool = True, remove_base64_images: bool = True,
+                    only_main_content: bool = False, remove_base64_images: bool = True,
                     exclude_tags: List[str] = ["nav", "footer", "aside", "script", "style"],
                     include_tags: List[str] = [],
-                    wait_for: Optional[int] = None, mobile: Optional[bool] = None) -> Dict[str, Any]:
+                    wait_for: Optional[int] = None, mobile: Optional[bool] = None,
+                    bypass_cookies: bool = False) -> Dict[str, Any]:
         """
         Main scrape method that uses the confirmed flat structure.
         This is the method that should be called by external code.
@@ -185,6 +88,16 @@ class FireCrawlExtractor:
         logger.info(f"[{request_id}] Initiating scrape for URL: {url}")
 
         api_url = f"{self.base_url}/scrape"
+        
+        # Prepare headers - start with default UA
+        api_headers = self.headers.copy()
+        api_headers["User-Agent"] = DEFAULT_USER_AGENT # Add User-Agent here
+        
+        # --- Define headers SPECIFICALLY for the target site ---
+        target_site_headers = {
+            "User-Agent": DEFAULT_USER_AGENT
+        }
+        # If bypass_cookies logic were here, the Cookie would be added to target_site_headers
 
         # Use the confirmed flat structure that worked in curl
         req_body: Dict[str, Any] = {
@@ -192,7 +105,7 @@ class FireCrawlExtractor:
             "formats": formats,
             "onlyMainContent": only_main_content,
             "removeBase64Images": remove_base64_images,
-            "headers": {"User-Agent": DEFAULT_USER_AGENT},
+            "headers": target_site_headers, # Use target site headers here
             "excludeTags": exclude_tags,
             "includeTags": include_tags,
             "timeout": 60000
@@ -213,12 +126,8 @@ class FireCrawlExtractor:
         status_code = -1
 
         try:
-            response = requests.post(
-                api_url,
-                json=req_body,
-                headers=self.headers,
-                timeout=self.request_timeout
-            )
+            # Use the internal method with retry logic
+            response = self._make_scrape_request(api_url, req_body)
             status_code = response.status_code
             
             # Add response header logging
@@ -268,100 +177,24 @@ class FireCrawlExtractor:
                     "error": error
                 }
 
-        except requests.exceptions.Timeout:
-            error_msg = f"Request timed out ({self.request_timeout}s) for URL: {url}"
+        except requests.exceptions.Timeout as e: # Catch Timeout if retries fail
+            error_msg = f"Request timed out after retries ({self.request_timeout}s) for URL: {url}"
             logger.error(f"[{request_id}] {error_msg}")
-            # Commented out to improve performance
-            # self._save_simplified_result(url, {"_error": "Request Timeout"}, status_code=408)
             return {
                 "success": False,
                 "error": error_msg
             }
-        except requests.exceptions.RequestException as e:
-            error_msg = f"Network error during request for {url}: {str(e)}"
+        except requests.exceptions.RequestException as e: # Catch other RequestExceptions (ConnectionError, HTTPError)
+            error_msg = f"Network error during request for {url} after potential retries: {str(e)}"
             logger.error(f"[{request_id}] {error_msg}", exc_info=True)
-            # Commented out to improve performance
-            # self._save_simplified_result(url, {"_error": f"Network Error: {e}"}, status_code=599)
             return {
                 "success": False,
                 "error": error_msg
             }
-        except Exception as e:
+        except Exception as e: # Catch any other unexpected errors
             error_msg = f"Unexpected error during scrape for {url}: {str(e)}"
             logger.exception(f"[{request_id}] {error_msg}")
-            # Commented out to improve performance
-            # self._save_simplified_result(url, {"_error": f"Unexpected Python Error: {e}"}, status_code=500)
             return {
                 "success": False,
                 "error": error_msg
             }
-
-    def scrape_simplified(self, url, attempts=3, request_id=None):
-        """Simplified API call to FireCrawl for just scraping content"""
-        logger.info(f"[{request_id}] Scraping URL with simplified API: {url}")
-        
-        # Prepare request
-        req_body = {
-            "url": url,
-            "formats": ["markdown", "html"],  # Fixed formats for simple scraping
-            "onlyMainContent": True  # Always extract main content only
-        }
-        
-        # Comment out debug logging of request details to improve performance
-        # logger.debug(f"[{request_id}] Request Headers: {json.dumps(self.headers)}")
-        # logger.debug(f"[{request_id}] Request Body (Raw): {json.dumps(req_body, indent=2)}")
-        
-        for attempt in range(attempts):
-            try:
-                # Make the API request
-                response = requests.post(
-                    f"{self.base_url}/scrape", 
-                    headers=self.headers,
-                    json=req_body,
-                    timeout=60
-                )
-                
-                status_code = response.status_code
-                logger.info(f"[{request_id}] FireCrawl Response Status: {status_code}")
-                
-                # Comment out debug logging of response headers to improve performance
-                # logger.debug(f"[{request_id}] Response Headers: {dict(response.headers)}")
-                
-                # Parse JSON response body
-                try:
-                    response_json = response.json()
-                except Exception as e:
-                    logger.error(f"[{request_id}] Failed to parse response as JSON: {e}")
-                    return None, status_code
-                
-                # Comment out debug logging of entire response body to improve performance
-                # response_log_str = json.dumps(response_json, indent=2)
-                # logger.debug(f"[{request_id}] FireCrawl Response Body:\n{response_log_str}")
-                
-                # Save the raw response for inspection
-                # Commented out to improve performance
-                # self._save_simplified_result(url, response_json, status_code)
-                
-                # Check for success
-                if status_code == 200:
-                    return response_json, status_code
-                    
-                # Handle rate limits
-                if status_code == 429:
-                    wait_time = int(response.headers.get('Retry-After', 5))
-                    logger.warning(f"[{request_id}] Rate limited, waiting {wait_time} seconds before retry")
-                    time.sleep(wait_time)
-                    continue
-                    
-                # Log other errors
-                logger.error(f"[{request_id}] FireCrawl API error: {status_code}")
-                return response_json, status_code
-                
-            except Exception as e:
-                logger.error(f"[{request_id}] Request error (attempt {attempt+1}/{attempts}): {str(e)}")
-                if attempt < attempts - 1:
-                    time.sleep(2)  # Wait before retry
-                    
-        # If we get here, all attempts failed
-        logger.error(f"[{request_id}] All {attempts} attempts failed for URL: {url}")
-        return None, 500

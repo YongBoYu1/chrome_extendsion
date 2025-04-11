@@ -101,19 +101,22 @@ class PageProcessor:
         # Remove Wikipedia citation references that might remain
         result = re.sub(r'\[\d+\]|\[citation needed\]|\[note \d+\]', '', result)
         
+        # Clean up extra whitespace again after removal
+        result = re.sub(r'\n{3,}', '\n\n', result)
         return result.strip()
 
     async def process_page(self, url: str, formats: List[str] = ["markdown", "html"],
-                         only_main_content: bool = True) -> Dict:
+                         only_main_content: bool = False) -> Dict:
         """Process a webpage by extracting content and generating a summary"""
         logger.info(f"Processing page: {url}")
         
         try:
-            # Extract content using FireCrawl
+            # Extract content using FireCrawl, matching the successful test script parameters
             extraction_result = await self.extractor.scrape(
                 url=url,
-                formats=formats,
-                only_main_content=only_main_content
+                formats=formats, # Typically ["markdown", "html"]
+                only_main_content=False, # Explicitly match the test script
+                bypass_cookies=False  # Explicitly match the test script (no Playwright)
             )
             
             if not extraction_result.get('success'):
@@ -125,26 +128,11 @@ class PageProcessor:
             content = data.get('markdown', '') or data.get('html', '')
             title = data.get('metadata', {}).get('title', '')
             
-            # Save original content to a text file for examination
-            save_dir = "scraped_content_debug"
-            if not os.path.exists(save_dir):
-                os.makedirs(save_dir)
-            
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            safe_title = ''.join(c if c.isalnum() or c in [' ', '_', '-'] else '_' for c in (title or "notitle"))[:50]
-            original_filename = f"{save_dir}/{timestamp}_{safe_title}_original.txt"
-            
-            with open(original_filename, 'w', encoding='utf-8') as f:
-                f.write(f"URL: {url}\n")
-                f.write(f"TITLE: {title}\n")
-                f.write(f"CONTENT TYPE: {'markdown' if 'markdown' in data else 'html'}\n")
-                f.write(f"CONTENT LENGTH: {len(content)} characters\n")
-                f.write("\n--- CONTENT START ---\n\n")
-                f.write(content)
-                f.write("\n\n--- CONTENT END ---\n")
-            
-            logger.info(f"Saved original scraped content to: {original_filename}")
-            
+            # ---> ADDED: Log raw markdown length
+            if 'markdown' in data:
+                logger.info(f"Raw markdown length received: {len(data['markdown'])}")
+            # ---> END ADDED
+
             # Extract clean text from markdown
             content_type = 'markdown' if 'markdown' in data else 'html'
             
@@ -157,22 +145,6 @@ class PageProcessor:
                 # In a production version, we would want to use BeautifulSoup here
                 cleaned_content = self.clean_content_regex(content)
                 logger.info("Used regex fallback for HTML content")
-            
-            # Save cleaned content
-            cleaned_filename = f"{save_dir}/{timestamp}_{safe_title}_cleaned.txt"
-            
-            with open(cleaned_filename, 'w', encoding='utf-8') as f:
-                f.write(f"URL: {url}\n")
-                f.write(f"TITLE: {title}\n")
-                f.write(f"CONTENT TYPE: {content_type}\n")
-                f.write(f"ORIGINAL CONTENT LENGTH: {len(content)} characters\n")
-                f.write(f"CLEANED CONTENT LENGTH: {len(cleaned_content)} characters\n")
-                f.write(f"REDUCTION: {len(content) - len(cleaned_content)} characters ({(len(content) - len(cleaned_content)) / len(content) * 100:.1f}%)\n")
-                f.write("\n--- CONTENT START ---\n\n")
-                f.write(cleaned_content)
-                f.write("\n\n--- CONTENT END ---\n")
-            
-            logger.info(f"Saved cleaned content to: {cleaned_filename}")
             
             # Generate summary using Gemini with cleaned content
             summary_result = await self.summarizer.summarize(cleaned_content, title)

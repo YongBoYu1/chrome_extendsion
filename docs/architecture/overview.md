@@ -2,129 +2,76 @@
 
 ## System Components
 
-The Page Processor Chrome Extension is built with a distributed architecture consisting of three main components:
+The Chrome Extension system comprises three main parts:
 
-1. **Chrome Extension Frontend**
-   - Popup Interface
-   - Background Script
-   - Result Page
-   - Content Scripts
+1.  **Chrome Extension Frontend:** Runs within the user's browser.
+    *   Popup Interface (`popup/`): Initial user interaction point.
+    *   Background Script (`background/`): Manages communication, state, and coordinates backend calls.
+    *   Result Page (`pages/result/`): Displays the processed content and summary.
+    *   Content Scripts (`content/`): (If used) Interact directly with web pages.
+    *   Utilities (`utils/`): Shared JavaScript functions (e.g., for storage, API calls).
 
-2. **Python Backend Server**
-   - FastAPI Server
-   - Content Processing Pipeline
-   - AI Integration
+2.  **Python Backend Server (`backend/`):** A separate service, likely hosted in the cloud.
+    *   FastAPI Application (`app.py`): Handles API requests from the extension.
+    *   Page Processor (`page_processor.py`): Orchestrates scraping and summarizing.
+    *   FireCrawl Extractor (`firecrawl_extractor.py`): Interacts with the FireCrawl API.
+    *   Gemini Summarizer (`gemini_summarizer.py`): Interacts with the Google Gemini API.
+    *   Cookie Handler (`cookie_handler.py`): (Optional, currently inactive) Uses Playwright for cookie consent.
 
-3. **External Services**
-   - FireCrawl API
-   - Google Gemini API
+3.  **External Services:** Third-party APIs used by the backend.
+    *   FireCrawl API: For web page content extraction.
+    *   Google Gemini API: For content summarization.
 
-## Component Interaction Flow
+## Component Interaction Flow (Typical Summarization)
 
 ```mermaid
 graph TD
-    A[Popup Interface] -->|Click Summarize| B[Background Script]
-    B -->|Process Request| C[Backend Server]
-    C -->|Extract Content| D[FireCrawl API]
-    D -->|Raw Content| C
-    C -->|Generate Summary| E[Gemini API]
-    E -->|Summary| C
-    C -->|Processing Updates| B
-    B -->|State Updates| F[Result Page]
-    F -->|Display Content| G[User]
+    A[User clicks Summarize in Popup/Page] -->|URL or Current Tab Info| B(Background Script)
+    B -->|POST /api/summarize Request (URL)| C{Backend Server (app.py)}
+    C -->|Call process_page| D[Page Processor]
+    D -->|Call scrape| E[FireCrawl Extractor]
+    E -->|POST /scrape| F[FireCrawl API]
+    F -->|Raw Content (Markdown/HTML)| E
+    E -->|Extraction Result| D
+    D -->|Clean Content| D
+    D -->|Call summarize| G[Gemini Summarizer]
+    G -->|Call generate_content| H[Gemini API]
+    H -->|Summary Text| G
+    G -->|Summary Result| D
+    D -->|Combined Result| C
+    C -->|HTTP Response (JSON)| B
+    B -->|Store Result / Send Message| I[Result Page]
+    I -->|Display Content & Summary| J[User]
 ```
 
-## Key Components
+*(Note: The flow differs slightly if summarizing provided content instead of a URL)*
 
-### 1. Chrome Extension Frontend
+## Backend Components (Brief Roles)
 
-#### Popup Interface (`popup/`)
-- User interaction point
-- Backend connection status
-- Processing initiation
-- Error handling
-
-#### Background Script (`background/`)
-- Message routing
-- State management
-- Tab management
-- Processing coordination
-
-#### Result Page (`pages/result/`)
-- Content display
-- Processing status
-- UI state management
-- Light mode support
-
-### 2. Python Backend (`backend/`)
-
-#### FastAPI Server (`app.py`)
-- HTTP endpoints
-- Request handling
-- Error management
-- Status tracking
-
-#### Content Processing (`page_processor.py`)
-- Processing orchestration
-- Content validation
-- Error handling
-- State management
-
-#### FireCrawl Integration (`firecrawl_extractor.py`)
-- Content extraction
-- HTML processing
-- Content cleaning
-- Metadata extraction
-
-#### Gemini Integration (`gemini_summarizer.py`)
-- AI summarization
-- Content optimization
-- Format handling
-
-### 3. Utilities (`utils/`)
-
-#### Storage Management (`storage.js`)
-- Chrome storage operations
-- State persistence
-- History management
-
-#### API Communication (`api.js`)
-- Backend requests
-- Response handling
-- Error management
+*   **FastAPI Server (`app.py`):** The entry point for API requests. Validates input, routes requests to appropriate services, handles basic errors, and sends back HTTP responses.
+*   **Page Processor (`page_processor.py`):** The main orchestrator for the `/api/summarize` endpoint. It uses the Extractor to get content, cleans it, and uses the Summarizer to generate the final output.
+*   **FireCrawl Extractor (`firecrawl_extractor.py`):** A client wrapper for the FireCrawl API. Handles making the actual HTTP requests to FireCrawl, including retry logic.
+*   **Gemini Summarizer (`gemini_summarizer.py`):** A client wrapper for the Google Gemini API. Handles preparing the prompt and making calls to the AI model, including retry logic.
+*   **Cookie Handler (`cookie_handler.py`):** An optional component to handle cookie banners using Playwright before scraping. Currently inactive in the default flow.
 
 ## Communication Patterns
 
-### 1. Internal Communication
-- Chrome messaging system for extension components
-- Event-based communication between UI components
-- State updates via Chrome storage
-
-### 2. External Communication
-- HTTP/REST for backend communication
-- WebSocket for real-time updates
-- API calls to external services
+*   **Extension Internal:** Uses the Chrome Messaging API (`chrome.runtime.sendMessage`, `chrome.runtime.onMessage`) for communication between the popup, background script, and result pages.
+*   **Extension to Backend:** Standard HTTP/REST API calls (using `fetch` or a similar method in JavaScript) from the background script to the hosted FastAPI backend server.
+*   **Backend to External APIs:** HTTP/REST API calls from the backend server (using `requests` and `google-generativeai` libraries) to FireCrawl and Google Gemini.
 
 ## State Management
 
-### 1. Processing State
-- Initiated
-- Extracting
-- Processing
-- Summarizing
-- Completed
-- Error
+*   **Backend:** Primarily stateless, although configuration (API keys) is loaded at startup. Does not store user session data currently.
+*   **Extension:** Uses `chrome.storage.local` or `chrome.storage.session` to store processing state for different URLs/tabs, potentially cached results, and user settings.
 
-### 2. UI State
-- Initial
-- Processing
-- Content
-- Error
+## Key Considerations (Current State)
 
-### 3. Storage State
-- Processing history
-- User preferences
-- Cached content
+*   **Stateless Backend:** The backend doesn't maintain user sessions. Each API request is independent.
+*   **Security:** CORS is currently open (`*`), needs restriction. No backend authentication or authorization is implemented.
+*   **Cost:** Direct calls to paid APIs (FireCrawl, Gemini) from the backend. Needs cost control measures (caching, rate limiting, auth/quotas) before public release.
+*   **Error Handling:** Basic error handling exists, including retries for external APIs, but could be more robust and provide clearer feedback to the user via the extension.
+*   **Deployment:** Requires hosting for the FastAPI backend and database (if added later).
 
 ## Security Considerations
 
