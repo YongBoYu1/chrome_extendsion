@@ -21,7 +21,7 @@
     "http://127.0.0.1:5001/*"
   ],
   "content_security_policy": {
-    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; script-src-elem 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://cdn.jsdelivr.net/npm/marked/marked.min.js; object-src 'self'; connect-src 'self' http://localhost:5001 http://127.0.0.1:5001; style-src 'self' 'unsafe-inline';"
+    "extension_pages": "script-src 'self' 'wasm-unsafe-eval' http://localhost:* http://127.0.0.1:*; object-src 'self'; connect-src 'self' http://localhost:5001 http://127.0.0.1:5001; style-src 'self' 'unsafe-inline';"
   },
   "icons": {
     "16": "icons/icon16.png",

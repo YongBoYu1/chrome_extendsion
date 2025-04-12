@@ -72,34 +72,55 @@ class GeminiSummarizer:
             # Create model
             model = self.setup_model()
             
-            # --- UPDATED Prompt ---
-            prompt = f"""You are an AI assistant that creates high-quality, comprehensive summaries of web pages.
+            # --- REVISED Prompt ---
+            prompt = f'''You are an expert AI assistant specializing in creating well-structured Markdown summaries of web content.
 
-Here is the content from a webpage {f'titled "{title}"' if title else ''}:
+Your task is to process the following text, which was extracted from a webpage {f'titled "{title}"' if title else ''}. The text has been lightly cleaned, but you should focus on summarizing its core informational content.
 
+**Source Text:**
+----------------
 {content}
+----------------
 
-Please perform the following tasks:
+**Instructions:**
 
-TASK 1: Generate a detailed summary of the content.
-- Highlight main points, key information, and conclusions.
-- Use proper Markdown formatting (headings, paragraphs, emphasis).
-- Ensure the summary is informative, well-structured, and captures the essence of the original content.
-- **Crucially, DO NOT include the 'Key Points' requested in TASK 2 within this summary text.**
+Please generate the following output, adhering strictly to the specified structure and formatting:
 
-TASK 2: Identify the 3-5 most important takeaways from the content.
-- List these takeaways as bullet points.
-- Each bullet point should be concise and start with "*" or "-".
-- Present these bullet points clearly *after* the main summary, separated by a unique marker like '---KEYPOINTS---'.
+**1. Main Summary Section(s):**
+   - **Requirement:** Divide the main summary into **2 to 4 distinct logical sections**.
+   - **Section Headings:** You **MUST** use **`## Markdown Headings`** to introduce each of these sections. Do not use `###` for the main sections.
+   - **Content:** Within each section, provide a detailed summary of the corresponding topic from the source text. Use standard Markdown for paragraphs. You can use *italic* or **bold** for emphasis where appropriate.
+   - **Constraint:** **DO NOT** write the entire summary as one single block of text before the key points. The use of multiple `##` headings is mandatory.
 
-Example Output Structure:
-[Detailed Summary using Markdown paragraphs, headings, etc.]
+**2. Separator:**
+   - After the *complete* main summary (including all its sections), insert the following separator line exactly:
+   ```
+   ---KEYPOINTS---
+   ```
+
+**3. Key Points Section:**
+   - Below the separator, list the **3 to 5 most important takeaways** or conclusions from the source text.
+   - **Formatting:** Present these as a bulleted list. Each point **MUST** start with `* `.
+
+**Example of the REQUIRED Output Structure:**
+
+## [Meaningful Section Title 1]
+[Paragraph(s) summarizing the first main topic...]
+
+## [Meaningful Section Title 2]
+[Paragraph(s) summarizing the second main topic...]
+
+## [Meaningful Section Title 3] (If applicable)
+[Paragraph(s) summarizing the third main topic...]
 
 ---KEYPOINTS---
-* Key point 1
-* Key point 2
-* Key point 3
-"""
+* Key takeaway 1.
+* Key takeaway 2.
+* Key takeaway 3.
+* Key takeaway 4. (If applicable)
+
+**Begin your structured summary:**
+'''
             
             logger.info("Sending content to Gemini for summarization")
             

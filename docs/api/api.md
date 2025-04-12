@@ -6,71 +6,117 @@ This document details the API endpoints and communication protocols used in the 
 
 ## Backend API Endpoints
 
-### Process Page
+The backend server runs on `http://localhost:5001` by default during development.
 
-Initiates content processing for a given URL.
-
-**Endpoint:** `POST /api/process`
-
-**Request:**
-```json
-{
-    "url": "https://example.com",
-    "options": {
-        "include_summary": true,
-        "extract_key_points": true,
-        "format": "markdown"
-    }
-}
-```
-
-**Response:**
-```json
-{
-    "content": {
-        "title": "Article Title",
-        "html": "<div>Processed HTML content</div>",
-        "markdown": "# Article Title\n\nProcessed markdown content",
-        "summary": "Brief summary of the content",
-        "key_points": [
-            "Key point 1",
-            "Key point 2",
-            "Key point 3"
-        ]
-    },
-    "metadata": {
-        "url": "https://example.com",
-        "processed_at": "2024-03-20T10:00:00Z",
-        "reading_time": 5,
-        "word_count": 1000
-    },
-    "status": "success"
-}
-```
-
-**Error Response:**
-```json
-{
-    "error": "Error message",
-    "type": "ProcessingError",
-    "code": 500
-}
-```
-
-### Health Check
+### Ping (Health Check)
 
 Checks the health status of the backend server.
 
-**Endpoint:** `GET /health`
+**Endpoint:** `GET /api/ping`
 
-**Response:**
+**Request Body:** None
+
+**Success Response (200 OK):**
 ```json
 {
-    "status": "healthy",
-    "version": "1.0.0",
-    "uptime": "10h 30m"
+    "status": "ok"
 }
 ```
+
+**Error Response:** Standard HTTP errors (e.g., 500 if server fails).
+
+### Summarize Page Content
+
+Extracts content from a URL, generates a summary and key points using configured services (Firecrawl, Gemini).
+
+**Endpoint:** `POST /api/summarize`
+
+**Request Body:**
+```json
+{
+    "url": "string (required) - The URL of the page to process",
+    "mode": "string (optional, default: 'summarize') - Processing mode (currently only 'summarize' is used)"
+}
+```
+
+**Success Response (200 OK):**
+```json
+{
+    "success": true,
+    "url": "string - The processed URL",
+    "content": { 
+        "success": true, 
+        "data": { 
+            "markdown": "string - Raw markdown extracted by Firecrawl",
+            "html": "string - Raw HTML extracted by Firecrawl",
+            "metadata": { 
+                "title": "string - Page title",
+                "description": "string - Page description",
+                // ... other Firecrawl metadata ...
+            }
+        }
+        // ... or { "success": false, "error": "..." } if extraction failed
+    },
+    "summary": "string - The generated summary text (in Markdown format)",
+    "keyPoints": [
+        "string - Key point 1",
+        "string - Key point 2",
+        // ... more key points
+    ],
+    "title": "string - The page title",
+    "wordCount": "integer - Estimated word count of the summary",
+    "readingTime": "integer - Estimated reading time in minutes for the summary"
+}
+```
+
+**Error Responses:**
+*   `422 Unprocessable Entity`: If the request body (`url`, `mode`) fails validation. The response body contains details about the validation error.
+*   `500 Internal Server Error`: If an unexpected error occurs during processing (e.g., cleaning fails, summarizer fails).
+*   `502 Bad Gateway`: If the call to the Gemini API fails after retries.
+*   Other standard HTTP errors.
+
+### FireCrawl Status Check (Not currently used by frontend)
+
+Checks if the FireCrawl API key is configured on the backend.
+
+**Endpoint:** `GET /api/firecrawl/status`
+
+**Request Body:** None
+
+**Success Response (200 OK):**
+```json
+{
+    "configured": true, 
+    "available": true
+    // Values can be false if API key is missing
+}
+```
+
+### FireCrawl Scrape (Not currently used by frontend)
+
+Directly triggers a FireCrawl scrape operation.
+
+**Endpoint:** `POST /api/firecrawl/scrape`
+
+**Request Body:** (Mirrors Firecrawl scrape options, see `backend/app.py` `FireCrawlScrapeRequest` model)
+```json
+{
+    "url": "string",
+    "formats": ["markdown", "html"],
+    "onlyMainContent": true,
+    // ... other options ...
+}
+```
+
+**Success Response (200 OK):** (Directly returns the Firecrawl API response)
+```json
+{
+    "success": true,
+    "data": { ... Firecrawl data ... }
+}
+```
+
+**Error Responses:** Standard HTTP errors, or Firecrawl API errors.
 
 ## Chrome Extension Message API
 

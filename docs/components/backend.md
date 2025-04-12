@@ -16,7 +16,7 @@ The Backend Server is a Python service built using the **FastAPI** framework. It
     *   Loads API keys and basic configuration from environment variables (using `python-dotenv`).
     *   Configures basic logging (currently streams to console at INFO level).
     *   Sets up CORS middleware (currently configured permissively with `allow_origins=["*"]`, needs restriction for production).
-    *   Uses `uvicorn` as the ASGI server for running the application.
+    *   Uses `uvicorn` as the ASGI server for running the application (defaults to port 5001).
 
 ### 2. Page Processor (`page_processor.py`)
 
@@ -25,8 +25,8 @@ The Backend Server is a Python service built using the **FastAPI** framework. It
     *   Orchestrates the main workflow for processing a URL requested via the `/api/summarize` endpoint.
     *   Calls the `FireCrawlExtractor` to fetch web page content.
     *   Determines content type (Markdown or HTML).
-    *   Cleans the extracted content:
-        *   Uses `markdown-it-py` for robust cleaning of Markdown content (`extract_text_from_markdown` method), preserving structure while removing formatting, links, and images.
+    *   Cleans the extracted content before sending it to the summarizer:
+        *   Uses `markdown-it-py` for **aggressive cleaning** of Markdown content (`extract_text_from_markdown` method). This preserves basic structure (headings, paragraphs, lists) but removes most formatting, link URLs (keeping text), images, code blocks, tables, etc., to reduce token count for the LLM.
         *   Includes a fallback regex-based cleaning method (`clean_content_regex`) for HTML content (note: using BeautifulSoup is recommended for better HTML parsing).
     *   Calls the `GeminiSummarizer` to generate a summary and key points from the cleaned content.
     *   Calculates word count from the summary text, and reading time (based on an average reading speed of 200 words per minute).

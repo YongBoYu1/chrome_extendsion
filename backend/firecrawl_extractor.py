@@ -31,8 +31,7 @@ class FireCrawlExtractor:
 
     def __init__(self, api_key: str,
                  base_url: str = "https://api.firecrawl.dev/v1",
-                 scrape_dir: str = "scraped_content_simplified", # Use different dir
-                 request_timeout: float = 90.0): # Overall request timeout
+                 request_timeout: float = 90.0):
 
         if not api_key:
             logger.error("FireCrawl API key is required for this simplified version.")
@@ -40,19 +39,11 @@ class FireCrawlExtractor:
 
         self.api_key = api_key
         self.base_url = base_url.rstrip('/')
-        self.scrape_dir = scrape_dir
         self.request_timeout = request_timeout
         self.headers = {
             "Authorization": f"Bearer {api_key}",
             "Content-Type": "application/json"
         }
-
-        if not os.path.exists(scrape_dir):
-            try:
-                os.makedirs(scrape_dir)
-                logger.info(f"Created simplified scrape directory: {scrape_dir}")
-            except OSError as e:
-                logger.error(f"Failed to create directory {scrape_dir}: {e}")
 
     # Define retry strategy for the API call
     @retry(stop=stop_after_attempt(3), # Retry 3 times
@@ -148,9 +139,8 @@ class FireCrawlExtractor:
                     "error": f"Failed to decode JSON response (HTTP {status_code})"
                 }
 
-            # Save the raw response for inspection
-            # Commented out to improve performance
-            # self._save_simplified_result(url, response_json, status_code)
+            # Verify _save_simplified_result call is removed or remains commented out
+            # # self._save_simplified_result(url, response_json, status_code)
 
             # Check for success
             if 200 <= status_code < 300 and response_json.get('success') is True:

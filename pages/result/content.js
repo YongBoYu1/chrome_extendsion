@@ -6,94 +6,6 @@ import { storageManager } from '../../utils/storage.js';
 import { escapeHtml, formatReadingTime, showError, hideError, setUIState, UIState } from './ui.js';
 
 /**
- * Renders markdown content to HTML
- * @param {string} markdown - Markdown content to render
- * @returns {string} - HTML result
- */
-export function renderMarkdown(markdown) {
-    if (!markdown) {
-        console.warn('[WARN] Empty markdown provided to renderMarkdown');
-        return '';
-    }
-
-    // Split markdown into sections
-    const sections = markdown.split('\n\n');
-    
-    // Process each section
-    let processedSections = [];
-    
-    for (let i = 0; i < sections.length; i++) {
-        const section = sections[i].trim();
-        if (!section) continue;
-        
-        // Normal section processing
-        processedSections.push(processSpecialSection(section));
-    }
-    
-    return processedSections.join('\n');
-}
-
-/**
- * Generates a valid ID from heading text for anchor links
- * @param {string} text - Heading text
- * @returns {string} Valid ID for HTML
- */
-function generateHeadingId(text) {
-    return text
-        .toLowerCase()
-        .replace(/[^\w\s-]/g, '')
-        .replace(/\s+/g, '-');
-}
-
-/**
- * Processes inline markdown formatting
- * @param {string} text - Raw text with markdown formatting
- * @returns {string} HTML with formatting applied
- */
-function processMarkdownInline(text) {
-    // Handle bold text (**text**)
-    text = text.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
-    
-    // Handle italic text (*text*)
-    text = text.replace(/\*([^*]+)\*/g, '<em>$1</em>');
-    
-    // Handle links [text](url)
-    text = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" class="text-blue-600 dark:text-blue-400 hover:underline">$1</a>');
-    
-    return text;
-}
-
-/**
- * Processes special sections with specific formatting - SIMPLIFIED
- * @param {string} section - The section to process
- * @returns {string} - Processed section HTML
- */
-function processSpecialSection(section) {
-    // Handle standard markdown headers ONLY for structural headings
-    if (section.startsWith('# ')) {
-        const headerText = section.substring(2).trim();
-        const headerId = generateHeadingId(headerText);
-        return `<h1 class="text-3xl font-bold text-gray-900 dark:text-gray-100 mt-8 mb-6" id="${headerId}">${headerText}</h1>`;
-    }
-    
-    if (section.startsWith('## ')) {
-        const headerText = section.substring(3).trim();
-        const headerId = generateHeadingId(headerText);
-        return `<h2 class="text-2xl font-bold text-gray-800 dark:text-gray-200 mt-6 mb-4" id="${headerId}">${headerText}</h2>`;
-    }
-    
-    if (section.startsWith('### ')) {
-        const headerText = section.substring(4).trim();
-        const headerId = generateHeadingId(headerText);
-        return `<h3 class="text-xl font-bold text-gray-700 dark:text-gray-300 mt-5 mb-4" id="${headerId}">${headerText}</h3>`;
-    }
-    
-    // Default: Treat EVERYTHING else as a paragraph.
-    // Inline formatting (like **bold**) will be handled by processMarkdownInline.
-    return `<p class="text-gray-700 dark:text-gray-300 my-4">${processMarkdownInline(section)}</p>`;
-}
-
-/**
  * Loads and displays the latest content for this tab
  */
 export async function loadAndDisplayLatestContent() {
@@ -160,45 +72,46 @@ export async function displayProcessedContent(content) {
 
     // Create content wrapper
     const contentWrapper = document.createElement('div');
-    contentWrapper.className = 'prose dark:prose-invert';
+    // Apply base prose styles for markdown rendering enhancement
+    contentWrapper.className = 'prose dark:prose-invert max-w-none'; // Use max-w-none to allow content to fill container
 
     // Handle different content formats
-    let processedContent = '';
-    let markdownToRender = content.markdown; // Start with original markdown
+    let processedContentHtml = '';
+    // Prioritize rendering the summary field if it exists (assuming it's markdown)
+    let markdownInput = content.summary || content.markdown; 
 
-    // --- Check for and remove duplicate H1 from markdown --- 
-    if (content.title && markdownToRender) {
-        const lines = markdownToRender.trim().split('\n');
+    // --- Check for and remove duplicate H1/H2 from markdown ---
+    if (content.title && markdownInput) {
+        const lines = markdownInput.trim().split('\n');
         if (lines.length > 0) {
             const firstLine = lines[0].trim();
-            if (firstLine.startsWith('# ')) {
-                const h1Text = firstLine.substring(2).trim();
-                // Compare titles case-insensitively
-                if (h1Text.toLowerCase() === content.title.trim().toLowerCase()) {
-                    markdownToRender = lines.slice(1).join('\n'); 
+            if (firstLine.startsWith('# ') || firstLine.startsWith('## ')) {
+                const hText = firstLine.replace(/^#+\s*/, '').trim();
+                if (hText.toLowerCase() === content.title.trim().toLowerCase()) {
+                    markdownInput = lines.slice(1).join('\n').trim(); 
                 }
             }
         }
     }
-    // --- End of duplicate H1 check ---
+    // --- End of duplicate check ---
 
-    if (markdownToRender) { // Use the potentially modified markdown
+    if (markdownInput) { // Render summary/markdown using Marked.js
         try {
-            processedContent = renderMarkdown(markdownToRender);
+            // CALL THE CORRECTED RENDERER
+            processedContentHtml = renderMarkdown(markdownInput);
         } catch (renderError) {
             console.error('[displayProcessedContent] ERROR during renderMarkdown:', renderError);
-            processedContent = '<p class="text-red-500">Error rendering Markdown.</p>';
+            processedContentHtml = '<p class="text-red-500">Error rendering Markdown.</p>';
         }
     } else if (content.html) {
-        processedContent = content.html;
-    } else if (content.summary) {
-        processedContent = renderMarkdown(content.summary); // Assuming summary is also markdown
+        // Fallback to raw HTML if no markdown/summary
+        processedContentHtml = content.html;
     } else {
-        console.warn('[displayProcessedContent] WARN: No content (markdown, html, summary) found to display.');
-        processedContent = '<p class="text-gray-600 dark:text-gray-400">No content available</p>';
+        console.warn('[displayProcessedContent] WARN: No content (summary, markdown, html) found to display.');
+        processedContentHtml = '<p class="text-gray-600 dark:text-gray-400">No content available</p>';
     }
 
-    contentWrapper.innerHTML = processedContent;
+    contentWrapper.innerHTML = processedContentHtml;
     mainWrapper.appendChild(contentWrapper);
     
     // Add reading time if available
@@ -215,8 +128,8 @@ export async function displayProcessedContent(content) {
     // Update page title
     document.title = content.title || 'Processed Content';
 
-    // Update sidebar contents
-    updateSidebar(content);
+    // Update sidebar contents AFTER rendering
+    updateSidebarAfterRender(content);
 
     // Switch to content state
     setUIState(UIState.CONTENT);
@@ -248,24 +161,19 @@ function setupBackToTopButton() {
 }
 
 /**
- * Updates all sidebar components
- * @param {Object} content - Content object
+ * Updates all sidebar components AFTER content is rendered by Marked.js
+ * @param {Object} content - Original content object (for non-DOM related data)
  */
-function updateSidebar(content) {
-    // Update the TOC list
-    updateTableOfContents();
-    
-    // Update reading stats
-    updateReadingStats(content);
-    
-    // Update key takeaways
-    updateKeyTakeaways(content);
+function updateSidebarAfterRender(content) {
+    updateTableOfContentsAfterRender(); // Needs to run after DOM is updated
+    updateReadingStats(content); // Uses data from content object
+    updateKeyTakeaways(content); // Uses data from content object
 }
 
 /**
- * Updates the table of contents based on headings in the content
+ * Updates the table of contents based on headings rendered by Marked.js
  */
-function updateTableOfContents() {
+function updateTableOfContentsAfterRender() {
     const tocList = document.getElementById('tocList');
     if (!tocList) return;
     
@@ -480,4 +388,89 @@ export async function loadContentById(contentId) {
         console.error('Error loading content:', error);
         showError('Failed to load content');
     }
+}
+
+/**
+ * Renders markdown content to HTML using a simplified custom parser
+ * @param {string} markdown - Markdown content to render
+ * @returns {string} - HTML result
+ */
+export function renderMarkdown(markdown) {
+    if (!markdown) {
+        console.warn('[WARN] Empty markdown provided to renderMarkdown');
+        return '';
+    }
+
+    // Pre-process: Ensure markdown headings are treated as separate blocks
+    // Replace single newline after a heading line with a double newline
+    const processedMarkdown = markdown.replace(/^(\#{1,6}\s+.*?)\n(?!\n)/gm, '$1\n\n'); 
+
+    // Split markdown into sections by DOUBLE newline
+    const sections = processedMarkdown.split('\n\n');
+    
+    // Process each section
+    let processedSections = [];
+    
+    for (let i = 0; i < sections.length; i++) {
+        const section = sections[i].trim();
+        if (!section) continue;
+        
+        // Process each non-empty section using the existing logic
+        processedSections.push(processSpecialSection(section));
+    }
+    
+    // Join processed sections with an empty string
+    return processedSections.join('');
+}
+
+// Keep generateHeadingId, processMarkdownInline, processSpecialSection as they were defined before Marked.js attempt
+// (Including the list handling we added earlier)
+function generateHeadingId(text) {
+    return text
+        .toLowerCase()
+        .replace(/[^\w\s-]/g, '')
+        .replace(/\s+/g, '-');
+}
+
+function processMarkdownInline(text) {
+    // Handle bold text (**text**)
+    text = text.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+    text = text.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+    text = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" class="text-blue-600 dark:text-blue-400 hover:underline">$1</a>');
+    return text;
+}
+
+function processSpecialSection(section) {
+    // Handle standard markdown headers
+    if (section.startsWith('# ')) {
+        const headerText = section.substring(2).trim();
+        const headerId = generateHeadingId(headerText);
+        return `<h1 class="text-3xl font-bold text-gray-900 dark:text-gray-100 mt-8 mb-6" id="${headerId}">${processMarkdownInline(headerText)}</h1>`;
+    }
+    if (section.startsWith('## ')) {
+        const headerText = section.substring(3).trim();
+        const headerId = generateHeadingId(headerText);
+        return `<h2 class="text-2xl font-bold text-gray-800 dark:text-gray-200 mt-6 mb-4" id="${headerId}">${processMarkdownInline(headerText)}</h2>`;
+    }
+    if (section.startsWith('### ')) {
+        const headerText = section.substring(4).trim();
+        const headerId = generateHeadingId(headerText);
+        return `<h3 class="text-xl font-bold text-gray-700 dark:text-gray-300 mt-5 mb-4" id="${headerId}">${processMarkdownInline(headerText)}</h3>`;
+    }
+    // Handle simple unordered lists (split by lines within the section)
+    const lines = section.split('\n');
+    const isUnorderedList = lines.every(line => line.trim().startsWith('* ') || line.trim().startsWith('- '));
+    if (isUnorderedList && lines.length > 0) {
+        let listHtml = '<ul class="list-disc list-inside space-y-2 my-4">';
+        lines.forEach(line => {
+            const itemText = line.trim().substring(2).trim();
+            if (itemText) {
+                listHtml += `<li class="text-gray-700 dark:text-gray-300">${processMarkdownInline(itemText)}</li>`;
+            }
+        });
+        listHtml += '</ul>';
+        return listHtml;
+    }
+    // Default: Treat as a paragraph
+    return `<p class="text-gray-700 dark:text-gray-300 my-4">${processMarkdownInline(section)}</p>`;
 } 
