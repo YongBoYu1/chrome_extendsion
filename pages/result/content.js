@@ -460,17 +460,21 @@ function processSpecialSection(section) {
     // Handle simple unordered lists (split by lines within the section)
     const lines = section.split('\n');
     const isUnorderedList = lines.every(line => line.trim().startsWith('* ') || line.trim().startsWith('- '));
+
     if (isUnorderedList && lines.length > 0) {
         let listHtml = '<ul class="list-disc list-inside space-y-2 my-4">';
         lines.forEach(line => {
-            const itemText = line.trim().substring(2).trim();
+            const itemText = line.trim().substring(2).trim(); // Remove '* ' or '- '
             if (itemText) {
-                listHtml += `<li class="text-gray-700 dark:text-gray-300">${processMarkdownInline(itemText)}</li>`;
+                // Add text-lg to list items
+                listHtml += `<li class="text-lg text-gray-700 dark:text-gray-300">${processMarkdownInline(itemText)}</li>`;
             }
         });
         listHtml += '</ul>';
         return listHtml;
     }
-    // Default: Treat as a paragraph
-    return `<p class="text-gray-700 dark:text-gray-300 my-4">${processMarkdownInline(section)}</p>`;
+    
+    // Default: Treat as a paragraph (handles regular text blocks)
+    // Add text-lg to paragraphs
+    return `<p class="text-lg text-gray-700 dark:text-gray-300 my-4">${processMarkdownInline(section)}</p>`;
 } 
