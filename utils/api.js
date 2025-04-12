@@ -5,6 +5,11 @@
 
 const CONFIG = {
     BACKEND_URL: 'http://localhost:5001',
+    API_PREFIX: '/api', // Define the common prefix
+    PING_ENDPOINT: '/ping',
+    SUMMARIZE_ENDPOINT: '/summarize',
+    FIRECRAWL_STATUS_ENDPOINT: '/firecrawl/status',
+    FIRECRAWL_SCRAPE_ENDPOINT: '/firecrawl/scrape',
     MAX_RETRIES: 3,
     RETRY_DELAY: 1000,
     BACKEND_TIMEOUT: 30000  // Increased to 30 seconds
@@ -12,22 +17,30 @@ const CONFIG = {
 
 class APIClient {
     async ping() {
-        return this.#makeRequest('/api/ping');
+        // Construct endpoint using config
+        const endpoint = `${CONFIG.API_PREFIX}${CONFIG.PING_ENDPOINT}`;
+        return this.#makeRequest(endpoint);
     }
 
     async summarize(url, mode = 'summarize') {
-        return this.#makeRequest('/api/summarize', {
+        // Construct endpoint using config
+        const endpoint = `${CONFIG.API_PREFIX}${CONFIG.SUMMARIZE_ENDPOINT}`;
+        return this.#makeRequest(endpoint, {
             method: 'POST',
             body: { url, mode }
         });
     }
 
     async checkFireCrawlStatus() {
-        return this.#makeRequest('/api/firecrawl/status');
+        // Construct endpoint using config
+        const endpoint = `${CONFIG.API_PREFIX}${CONFIG.FIRECRAWL_STATUS_ENDPOINT}`;
+        return this.#makeRequest(endpoint);
     }
 
     async scrape(url, options = {}) {
-        return this.#makeRequest('/api/firecrawl/scrape', {
+        // Construct endpoint using config
+        const endpoint = `${CONFIG.API_PREFIX}${CONFIG.FIRECRAWL_SCRAPE_ENDPOINT}`;
+        return this.#makeRequest(endpoint, {
             method: 'POST',
             body: { url, ...options }
         });

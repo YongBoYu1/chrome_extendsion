@@ -119,9 +119,7 @@ class ProcessingQueue {
                 console.log('[Queue] Processing URL:', url);
                 
                 // Step 2: Process URL
-                const result = await this.apiClient.summarize(url, {
-                    mode: info.mode || 'summarize'
-                });
+                const result = await this.apiClient.summarize(url, info.mode || 'summarize');
                 
                 // Step 3: Store content first to ensure it's available
                 await storageManager.storeContent({
