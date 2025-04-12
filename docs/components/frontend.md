@@ -65,6 +65,7 @@ The Chrome Extension Frontend consists of several key components that work toget
 - Content rendering
 - Markdown processing
 - HTML sanitization
+- Full-width content display (maximizes available space)
 ```
 
 #### `pages/result/processing.js`

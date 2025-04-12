@@ -32,38 +32,48 @@ python -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
 
 # Install dependencies
-pip install -r requirements.txt
+pip install -r backend/requirements.txt
 
 # Set up environment variables
-cp .env.example .env
-# Edit .env with your API keys
-```
-
-3. **Frontend Setup**
-```bash
-# Install dependencies
-npm install
-
-# Build extension
-npm run build
+cp backend/.env.example backend/.env
+# Edit backend/.env with your API keys:
+# - FIRECRAWL_API_KEY
+# - GEMINI_API_KEY
 ```
 
 ## Project Structure
 
 ```
-chrome-extension/
-├── backend/
-│   ├── app.py                 # Main Flask application
-│   ├── page_processor.py      # Content processing logic
-│   ├── gemini_summarizer.py   # AI summarization
-│   └── requirements.txt       # Python dependencies
-├── extension/
-│   ├── manifest.json          # Extension manifest
-│   ├── background/            # Background scripts
-│   ├── popup/                 # Popup interface
-│   └── pages/                 # Result pages
-├── docs/                      # Documentation
-└── tests/                     # Test suites
+.
+├── backend/                 # Python backend (FastAPI)
+│   ├── app.py              # Server & API endpoints
+│   ├── page_processor.py   # Content processing orchestration
+│   ├── gemini_summarizer.py    # AI summarization service
+│   ├── firecrawl_extractor.py # Firecrawl client (if separate)
+│   └── requirements.txt    # Python dependencies
+│   └── .env / .env.example # Environment variables
+├── background/             # Extension background scripts
+│   └── processing/         # Processing queue, state management
+│   └── services/           # Background service integrations
+│   └── background.js       # Main background script (if used)
+├── popup/                  # Extension popup UI
+│   ├── popup.html         # Popup interface
+│   └── popup.js           # Popup logic
+│   └── popup.css          # Popup styling (if separate)
+├── pages/                  # Extension pages (e.g., result page)
+│   └── result/            # Result page components
+│       ├── index.html     # Result page structure
+│       ├── styles.css     # Styling
+│       ├── index.js       # Main result page logic
+│       ├── processing.js  # Processing state UI
+│       ├── ui.js          # UI state and updates
+│       └── content.js     # Content handling
+├── utils/                  # Shared utility scripts (JS)
+│   └── api.js             # API client
+│   └── storage.js         # Storage manager
+├── docs/                   # Documentation
+├── assets/                 # Icons, images (optional)
+└── manifest.json          # Extension manifest
 ```
 
 ## Development Workflow
@@ -72,7 +82,7 @@ chrome-extension/
 
 #### Backend Server
 ```bash
-# Start the development server
+# Start the development server from the project root
 python backend/app.py
 ```
 
@@ -81,41 +91,21 @@ python backend/app.py
 2. Go to `chrome://extensions/`
 3. Enable "Developer mode"
 4. Click "Load unpacked"
-5. Select the `extension` directory
+5. Select the project root directory (the one containing manifest.json)
 
 ### 2. Making Changes
 
 #### Backend Changes
-1. Make changes to Python files
-2. Server will auto-reload
-3. Test endpoints using Postman/curl
+1. Make changes to Python files in `backend/`
+2. The FastAPI server (if running with `uvicorn --reload`) should auto-reload.
+   If not, restart the server (`Ctrl+C` then `python backend/app.py`).
+3. Test endpoints using the extension or tools like Postman/curl.
 
 #### Frontend Changes
-1. Make changes to extension files
-2. Click "Reload" in Chrome extensions page
-3. Test in browser
-
-### 3. Testing
-
-#### Run Backend Tests
-```bash
-pytest tests/
-```
-
-#### Run Frontend Tests
-```bash
-npm test
-```
-
-### 4. Building for Production
-
-```bash
-# Build extension
-npm run build:prod
-
-# Package extension
-npm run package
-```
+1. Make changes to HTML/JS/CSS files in `popup/`, `pages/`, `background/`, `utils/`.
+2. Go to `chrome://extensions/`.
+3. Click the "Reload" icon for your unpacked extension.
+4. Test the changes in the browser.
 
 ## Code Style Guidelines
 
@@ -333,43 +323,6 @@ class ContentManager {
     }
 }
 ```
-
-## Deployment
-
-### Backend Deployment
-
-1. **Docker Deployment**
-```bash
-# Build image
-docker build -t backend-server .
-
-# Run container
-docker run -p 5000:5000 backend-server
-```
-
-2. **Environment Configuration**
-```bash
-# Production settings
-export FLASK_ENV=production
-export DEBUG=False
-export API_KEY=your_api_key
-```
-
-### Extension Deployment
-
-1. **Build Production Version**
-```bash
-# Build
-npm run build:prod
-
-# Package
-npm run package
-```
-
-2. **Chrome Web Store**
-- Create developer account
-- Package extension
-- Submit for review
 
 ## Contributing
 

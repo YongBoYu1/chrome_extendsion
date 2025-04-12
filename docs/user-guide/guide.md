@@ -46,8 +46,8 @@ This Chrome Extension helps you extract, process, and read web content in a clea
 
 #### Clean Reading View
 - Removes ads and distractions
-- Optimizes layout for reading
-- Adjusts typography for better readability
+- Full-width content layout maximizes reading space
+- Optimizes typography for better readability
 - Supports dark mode
 
 #### Content Formats
@@ -60,7 +60,8 @@ This Chrome Extension helps you extract, process, and read web content in a clea
 #### Content Summary
 - Brief overview of the content
 - Main points highlighted
-- Estimated reading time
+- Accurate reading time estimation (based on word count)
+- Key takeaways clearly presented
 
 #### Key Points Extraction
 - Important takeaways

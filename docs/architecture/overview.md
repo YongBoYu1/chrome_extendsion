@@ -38,6 +38,7 @@ graph TD
     G -->|Call generate_content| H[Gemini API]
     H -->|Summary Text| G
     G -->|Summary Result| D
+    D -->|Calculate word count & reading time| D
     D -->|Combined Result| C
     C -->|HTTP Response (JSON)| B
     B -->|Store Result / Send Message| I[Result Page]

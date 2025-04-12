@@ -29,7 +29,8 @@ The Backend Server is a Python service built using the **FastAPI** framework. It
         *   Uses `markdown-it-py` for robust cleaning of Markdown content (`extract_text_from_markdown` method), preserving structure while removing formatting, links, and images.
         *   Includes a fallback regex-based cleaning method (`clean_content_regex`) for HTML content (note: using BeautifulSoup is recommended for better HTML parsing).
     *   Calls the `GeminiSummarizer` to generate a summary and key points from the cleaned content.
-    *   Combines results from extraction and summarization into a final response.
+    *   Calculates word count from the summary text, and reading time (based on an average reading speed of 200 words per minute).
+    *   Combines results from extraction and summarization into a final response, including readingTime and wordCount fields.
 
 ### 3. FireCrawl Extractor (`firecrawl_extractor.py`)
 
