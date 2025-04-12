@@ -12,139 +12,100 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from dotenv import load_dotenv
+from pathlib import Path
 
 # Fix import path - using relative import since we're running from the backend directory
 from firecrawl_extractor import FireCrawlExtractor
 from gemini_summarizer import GeminiSummarizer
 from page_processor import PageProcessor
 
-# Load environment variables
-load_dotenv()
-
-# Set up API keys
-FIRECRAWL_API_KEY = os.getenv('FIRECRAWL_API_KEY')
-GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
-
-# Configure logging
+# Configure basic logging
 logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s [%(levelname)s] %(message)s',
-    force=True,
-    handlers=[
-        logging.StreamHandler()
-    ]
+    level=logging.INFO, # Keep INFO level for startup and general status
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
-
-# Get the logger for this module
 logger = logging.getLogger(__name__)
 
-# Set all loggers to INFO level (not DEBUG)
-for log_name in logging.root.manager.loggerDict:
-    logging.getLogger(log_name).setLevel(logging.INFO)
+# --- Load environment variables ---
+try:
+    load_dotenv(dotenv_path=Path(__file__).resolve().parent / '.env')
+    firecrawl_api_key = os.getenv("FIRECRAWL_API_KEY")
+    gemini_api_key = os.getenv("GEMINI_API_KEY")
 
-# Initialize components
-extractor = FireCrawlExtractor(api_key=FIRECRAWL_API_KEY)
-summarizer = GeminiSummarizer(api_key=GEMINI_API_KEY)
+    if not firecrawl_api_key:
+        logger.warning("FIRECRAWL_API_KEY not found in .env file.")
+    # Keep Gemini key check, it's essential
+    if not gemini_api_key:
+        logger.critical("GEMINI_API_KEY not found in .env file. Summarization will fail.")
+        # Consider exiting if Gemini key is missing
+        # sys.exit("Critical error: Gemini API key missing.")
+
+except Exception as e:
+    logger.error(f"Error loading .env file: {e}")
+    firecrawl_api_key = None
+    gemini_api_key = None
+
+# --- Initialize services ---
+
+# Initialize FireCrawl extractor
+extractor = FireCrawlExtractor(api_key=firecrawl_api_key)
+
+# Initialize Gemini summarizer
+summarizer = GeminiSummarizer(api_key=gemini_api_key)
+
+# Initialize PageProcessor
 page_processor = PageProcessor(extractor=extractor, summarizer=summarizer)
 
-# Initialize FastAPI app
-app = FastAPI(title="Page Processor API")
+app = FastAPI()
 
-# Add CORS middleware
+# --- CORS Middleware ---
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["*"],  # Allow all origins for simplicity (adjust for production)
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["*"],  # Allow all methods
+    allow_headers=["*"],  # Allow all headers
 )
 
-# Pydantic models for request validation
+# --- API Models ---
 class SummarizeRequest(BaseModel):
-    """Request model for summarization"""
-    url: Optional[str] = None
-    title: Optional[str] = None
-    content: Optional[str] = None
-    max_length: Optional[int] = 1000
-
-class FireCrawlScrapeRequest(BaseModel):
-    """Request model for Fire Crawl scrape endpoint"""
     url: str
-    formats: List[str] = ["markdown", "html"]
-    onlyMainContent: bool = True
-    removeBase64Images: bool = True
-    excludeTags: List[str] = []
-    includeTags: List[str] = []
-    waitFor: Optional[int] = None
-    mobile: Optional[bool] = None
+    mode: str = 'summarize'
 
-# API endpoints
-@app.get("/api/ping")
-async def ping():
-    """Health check endpoint"""
-    logger.info("Ping endpoint called - backend is running")
-    return {"status": "ok"}
-
-@app.get("/api/firecrawl/status")
-async def firecrawl_status():
-    """Check if FireCrawl API is configured"""
-    logger.info("Checking FireCrawl API configuration")
-    return {
-        "configured": bool(FIRECRAWL_API_KEY),
-        "available": bool(FIRECRAWL_API_KEY)
-    }
-
-@app.post("/api/summarize")
-async def summarize(request: SummarizeRequest):
-    """Generate a summary of the provided content"""
-    if not request.content and not request.url:
-        raise HTTPException(status_code=400, detail="Either content or URL must be provided")
-    
+# --- API Endpoints ---
+@app.post("/summarize")
+async def summarize_endpoint(request: SummarizeRequest):
+    logger.info(f"Received request for URL: {request.url}")
     try:
-        if request.url:
-            # Process the URL using the PageProcessor
-            result = await page_processor.process_page(
-                url=request.url,
-                formats=["markdown", "html"],
-                only_main_content=True
-            )
+        # Use PageProcessor to handle the request
+        result = await page_processor.process_page(request.url)
+        
+        if result.get("success"):
+            # ---> REMOVED DEBUG LOG: Don't log the whole successful result
+            # logger.info(f"Successfully processed: {request.url}, Title: {result.get('title')}")
             return result
         else:
-            # Directly summarize the provided content
-            summary_result = await summarizer.summarize(
-                content=request.content,
-                title=request.title,
-                max_length=request.max_length
-            )
-            return summary_result
+            logger.error(f"Processing failed for {request.url}: {result.get('error')}")
+            raise HTTPException(status_code=500, detail=result.get("error", "Processing failed"))
+            
+    except HTTPException as http_exc:
+        # Re-raise HTTP exceptions directly
+        raise http_exc
     except Exception as e:
-        logger.error(f"Error in summarize endpoint: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.exception(f"Unexpected error processing {request.url}: {str(e)}")
+        raise HTTPException(status_code=500, detail="An unexpected error occurred")
 
-@app.post("/api/firecrawl/scrape")
-async def fire_crawl_scrape(request: FireCrawlScrapeRequest):
-    """Scrape a single webpage with FireCrawl"""
-    try:
-        result = await extractor.scrape(
-            url=request.url,
-            formats=request.formats,
-            only_main_content=request.onlyMainContent,
-            remove_base64_images=request.removeBase64Images,
-            exclude_tags=request.excludeTags,
-            include_tags=request.includeTags,
-            wait_for=request.waitFor,
-            mobile=request.mobile
-        )
-        return result
-    except Exception as e:
-        logger.error(f"Error in fire_crawl_scrape endpoint: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+@app.get("/ping")
+async def ping_endpoint():
+    # ---> REMOVED DEBUG LOG
+    # logger.info("Received ping request")
+    return {"status": "ok"}
 
-# Start the server
+# --- Main execution ---
 if __name__ == "__main__":
-    import uvicorn
-    port = int(os.getenv("PORT", "5001"))
-    logger.info(f"Starting server on port {port}")
-    logger.info(f"FireCrawl API key configured: {bool(FIRECRAWL_API_KEY)}")
-    logger.info(f"Gemini API key configured: {bool(GEMINI_API_KEY)}")
-    uvicorn.run("app:app", host="0.0.0.0", port=port, reload=True) 
+    logger.info("Starting backend server...")
+    # Recommended: Use environment variables for host and port in production
+    host = os.getenv('HOST', '127.0.0.1') 
+    port = int(os.getenv('PORT', '8000'))
+    
+    uvicorn.run(app, host=host, port=port)

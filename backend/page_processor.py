@@ -128,35 +128,43 @@ class PageProcessor:
             content = data.get('markdown', '') or data.get('html', '')
             title = data.get('metadata', {}).get('title', '')
             
-            # ---> ADDED: Log raw markdown length
-            if 'markdown' in data:
-                logger.info(f"Raw markdown length received: {len(data['markdown'])}")
-            # ---> END ADDED
-
             # Extract clean text from markdown
             content_type = 'markdown' if 'markdown' in data else 'html'
             
             if content_type == 'markdown':
                 # Use markdown-it-py parser for markdown content
                 cleaned_content = self.extract_text_from_markdown(content)
-                logger.info("Used markdown-it parser to extract clean text")
             else:
                 # For HTML content, use the existing regex cleaning as fallback
                 # In a production version, we would want to use BeautifulSoup here
                 cleaned_content = self.clean_content_regex(content)
-                logger.info("Used regex fallback for HTML content")
             
             # Generate summary using Gemini with cleaned content
             summary_result = await self.summarizer.summarize(cleaned_content, title)
             
+            # Calculate word count and reading time from summary
+            summary_text = summary_result.get('summary', '')
+            word_count = 0
+            reading_time_minutes = 0
+            if summary_text:
+                # Simple word count based on whitespace splitting
+                words = summary_text.split()
+                word_count = len(words)
+                # Estimate reading time (e.g., 200 words per minute)
+                reading_time_minutes = round(word_count / 200) if word_count > 0 else 0
+            else:
+                logger.warning("Summary text is empty, cannot calculate word count or reading time.")
+
             # Combine results
             return {
                 "success": True,
                 "url": url,
                 "content": extraction_result,
-                "summary": summary_result.get('summary'),
+                "summary": summary_text, # Use the variable we already have
                 "keyPoints": summary_result.get('keyPoints', []),
-                "title": title
+                "title": title,
+                "wordCount": word_count,
+                "readingTime": reading_time_minutes
             }
             
         except Exception as e:
@@ -172,7 +180,6 @@ class PageProcessor:
         """
         # Start with the original content length
         original_length = len(content)
-        logger.info(f"Original content length: {original_length} characters")
         
         # Replace image markdown: ![](...) or [![...](...)](...)
         content = re.sub(r'!\[(.*?)\]\([^)]+\)', '', content)
@@ -206,7 +213,5 @@ class PageProcessor:
         
         # Log the new length
         new_length = len(content)
-        logger.info(f"Cleaned content length: {new_length} characters")
-        logger.info(f"Reduced by: {original_length - new_length} characters ({(original_length - new_length) / original_length * 100:.1f}%)")
         
         return content 
