@@ -35,16 +35,12 @@ class ProcessingQueue {
             ...info,
             enqueueTime: Date.now() // Track when URL was added to ensure FIFO order
         });
-        console.log('[Queue] Added URL to queue. Size:', this.queue.size);
         
         if (!this.activeProcessing) {
-            console.log('[Queue] Starting processing');
             // Start processing in a way that doesn't block the caller
             this.startProcessing().catch(error => {
                 console.error('[Queue] Error during processing:', error);
             });
-        } else {
-            console.log('[Queue] Processing already active, URL queued');
         }
     }
 
@@ -53,7 +49,6 @@ class ProcessingQueue {
      */
     async startProcessing() {
         if (this.activeProcessing) {
-            console.log('[Queue] Processing already active, ignoring duplicate start');
             return;
         }
         
@@ -64,7 +59,6 @@ class ProcessingQueue {
             while (this.queue.size > 0) {
                 // Check if another operation is in progress
                 if (this.processingLock) {
-                    console.log('[Queue] Waiting for lock to be released');
                     await new Promise(resolve => setTimeout(resolve, 100));
                     continue;
                 }
@@ -88,7 +82,6 @@ class ProcessingQueue {
      */
     async processOne() {
         if (this.queue.size === 0) {
-            console.log('[Queue] No URLs to process');
             return;
         }
 
@@ -107,7 +100,6 @@ class ProcessingQueue {
             
             // Clear state completely between URLs to prevent cross-contamination
             await this.stateManager.setState(null);
-            console.log('[Queue] State cleared for new URL processing');
             
             // Use a transaction-like approach: prepare all data first, then update state
             try {
@@ -139,6 +131,8 @@ class ProcessingQueue {
                     keyPoints: result.keyPoints,
                     markdown: result.markdown,
                     html: result.html,
+                    wordCount: result.wordCount,
+                    readingTime: result.readingTime,
                     timestamp: Date.now()
                 });
                 
@@ -149,7 +143,6 @@ class ProcessingQueue {
                     statusText: 'Summary generated successfully!',
                     url: url,
                     title: info.title,
-                    result: result,
                     tabId: info.tabId,
                     resultTabId: info.resultTabId,
                     queueSize: this.queue.size,

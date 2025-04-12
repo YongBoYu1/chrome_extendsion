@@ -150,28 +150,31 @@
             overflow-y: auto;
         }
         
-        .key-takeaways-list {
+        /* Remove redundant key takeaways list background */
+        /* .key-takeaways-list {
             border-radius: 0.5rem;
             padding: 1rem;
             background-color: rgba(59, 130, 246, 0.05);
             margin-top: 0.5rem;
-        }
+        } */
         
-        .key-takeaways-item {
+        /* Remove redundant key takeaways item styling */
+        /* .key-takeaways-item {
             position: relative;
             padding-left: 1.5rem;
             margin-bottom: 0.75rem;
             font-size: 0.875rem;
             color: #4b5563;
-        }
+        } */
         
-        .key-takeaways-item:before {
+        /* Remove redundant key takeaways item before pseudo-element */
+        /* .key-takeaways-item:before {
             content: "✓";
             position: absolute;
             left: 0;
             color: #1a73e8;
             font-weight: bold;
-        }
+        } */
         
         /* Enhanced bullet points */
         .prose ul li {
@@ -343,43 +346,50 @@
     <div id="resultContainer" class="flex flex-col lg:flex-row max-w-7xl mx-auto px-4 pt-4 pb-12 gap-6">
         <aside class="lg:sticky lg:top-24 lg:w-72 lg:flex-shrink-0 lg:self-start">
             <!-- Improved sidebar with better visual hierarchy -->
-            <div id="tocContainer" class="rounded-lg shadow bg-white dark:bg-gray-800">
+            <div id="tocContainer" class="rounded-lg shadow bg-white dark:bg-gray-800 p-5">
                 <h3 class="font-semibold text-gray-800 dark:text-gray-200 mb-4 text-lg">Contents</h3>
-                <ul id="tocList" class="toc-list mb-6"></ul>
                 
-                <!-- Enhanced Reading Stats Section -->
-                <div class="border-t border-gray-100 dark:border-gray-700 pt-4 mb-4">
-                    <h3 class="font-semibold text-gray-800 dark:text-gray-200 mb-3 text-lg">Reading Stats</h3>
-                    <div class="reading-stats-container">
-                        <div class="reading-stats-item">
-                            <div class="reading-stats-icon">
+                <!-- START: Relocated Reading Stats Section -->
+                <!-- Removed border-t, pt-4. Added mb-6 -->
+                <div class="mb-6">
+                    <!-- Adjusted heading margin mb-3 to mb-4 -->
+                    <h3 class="font-semibold text-gray-800 dark:text-gray-200 mb-4 text-lg">Reading Stats</h3>
+                    <div class="reading-stats-container flex space-x-4">
+                        <div class="reading-stats-item flex items-center space-x-2">
+                            <div class="reading-stats-icon text-blue-600 dark:text-blue-400">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                     <circle cx="12" cy="12" r="10"></circle>
                                     <polyline points="12 6 12 12 16 14"></polyline>
                                 </svg>
                             </div>
                             <div>
-                                <p id="readingTimeValue" class="reading-stats-value">3 min</p>
-                                <p class="reading-stats-label">read</p>
+                                <p id="readingTimeValue" class="reading-stats-value text-sm font-medium text-gray-900 dark:text-gray-100">N/A</p>
+                                <p class="reading-stats-label text-xs text-gray-500 dark:text-gray-400">read</p>
                             </div>
                         </div>
-                        <div class="reading-stats-item">
-                            <div class="reading-stats-icon">
+                        <div class="reading-stats-item flex items-center space-x-2">
+                            <div class="reading-stats-icon text-blue-600 dark:text-blue-400">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                     <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
                                 </svg>
                             </div>
                             <div>
-                                <p id="wordCountValue" class="reading-stats-value">750</p>
-                                <p class="reading-stats-label">words</p>
+                                <p id="wordCountValue" class="reading-stats-value text-sm font-medium text-gray-900 dark:text-gray-100">N/A</p>
+                                <p class="reading-stats-label text-xs text-gray-500 dark:text-gray-400">words</p>
                             </div>
                         </div>
                     </div>
                 </div>
+                 <!-- END: Relocated Reading Stats Section -->
+
+                <ul id="tocList" class="toc-list mb-6"></ul>
+                
+                <!-- Removed the original Reading Stats section -->
                 
                 <!-- Enhanced Key Takeaways with better visual cues -->
                 <div id="mainKeyTakeaways">
-                    <h3 class="font-semibold text-gray-800 dark:text-gray-200 mb-3 text-lg">Key Takeaways</h3>
+                     <!-- Adjusted heading margin mb-3 to mb-4 -->
+                    <h3 class="font-semibold text-gray-800 dark:text-gray-200 mb-4 text-lg">Key Takeaways</h3>
                     <ul id="mainKeyTakeawaysList" class="key-takeaways-list"></ul>
                 </div>
             </div>

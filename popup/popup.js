@@ -7,7 +7,8 @@ import { storageManager } from '../utils/storage.js';
  */
 
 document.addEventListener('DOMContentLoaded', async function() {
-    console.log('[DEBUG] Initializing popup...');
+    // ---> REMOVED DEBUG LOG
+    // console.log('[DEBUG] Initializing popup...');
     
     try {
         // Initialize UI
@@ -34,16 +35,19 @@ function setupSummarizeButton() {
 
     summarizeBtn.addEventListener('click', async function(event) {
         event.preventDefault();
-        console.log('[DEBUG] Summarize button clicked.'); 
+        // ---> REMOVED DEBUG LOG
+        // console.log('[DEBUG] Summarize button clicked.'); 
 
         try {
-            console.log('[DEBUG] Getting current tab...'); 
+            // ---> REMOVED DEBUG LOG
+            // console.log('[DEBUG] Getting current tab...'); 
             const currentTab = await getCurrentTab();
-            console.log('[DEBUG] Current tab:', {
-                id: currentTab?.id,
-                url: currentTab?.url,
-                title: currentTab?.title
-            }); 
+            // ---> REMOVED DEBUG LOG
+            // console.log('[DEBUG] Current tab:', {
+            //     id: currentTab?.id,
+            //     url: currentTab?.url,
+            //     title: currentTab?.title
+            // }); 
 
             if (!currentTab || !isValidUrl(currentTab.url)) {
                 console.error('[ERROR] Invalid tab or URL:', {
@@ -54,7 +58,8 @@ function setupSummarizeButton() {
                 showError('Cannot process this type of page');
                 return;
             }
-            console.log('[DEBUG] Tab validation passed, proceeding to initiate processing...'); 
+            // ---> REMOVED DEBUG LOG
+            // console.log('[DEBUG] Tab validation passed, proceeding to initiate processing...'); 
 
             await initiateProcessing(currentTab);
 
@@ -81,11 +86,12 @@ async function initiateProcessing(tab) {
 
     try {
         // Then send the start_processing message with all info
-        console.log('[DEBUG] Sending start_processing message:', {
-            type: 'start_processing',
-            mode: 'summarize',
-            ...tabInfo
-        });
+        // ---> REMOVED DEBUG LOG
+        // console.log('[DEBUG] Sending start_processing message:', {
+        //     type: 'start_processing',
+        //     mode: 'summarize',
+        //     ...tabInfo
+        // });
         
         // Send message to background script and wait for response
         const response = await chrome.runtime.sendMessage({
@@ -93,24 +99,28 @@ async function initiateProcessing(tab) {
             mode: 'summarize',
             ...tabInfo
         });
-        console.log('[DEBUG] Response from background for start_processing:', response);
+        // ---> REMOVED DEBUG LOG
+        // console.log('[DEBUG] Response from background for start_processing:', response);
 
         // Only after message is sent and response received, create the result tab
-        console.log('[DEBUG] Creating result tab...');
+        // ---> REMOVED DEBUG LOG
+        // console.log('[DEBUG] Creating result tab...');
         const resultTab = await chrome.tabs.create({
             url: chrome.runtime.getURL(`pages/result.html?url=${encodeURIComponent(tab.url)}`),
             active: true
         });
-        console.log('[DEBUG] Result tab created:', {
-            id: resultTab.id,
-            url: resultTab.url
-        });
+        // ---> REMOVED DEBUG LOG
+        // console.log('[DEBUG] Result tab created:', {
+        //     id: resultTab.id,
+        //     url: resultTab.url
+        // });
 
         // Update tabInfo with result tab ID
         tabInfo.resultTabId = resultTab.id;
 
         // Now it's safe to close the popup
-        console.log('[DEBUG] All messages sent, closing popup window.');
+        // ---> REMOVED DEBUG LOG
+        // console.log('[DEBUG] All messages sent, closing popup window.');
         window.close();
 
     } catch (error) {
@@ -124,17 +134,43 @@ async function initiateProcessing(tab) {
 }
 
 async function initializeConnections() {
+    // ---> Get status elements
+    const statusTextElement = document.getElementById('backendStatus');
+    const statusIndicatorElement = document.getElementById('statusIndicator');
+    // <--- END Get status elements
+
     try {
         // Check backend status
         const isBackendAvailable = await checkBackendStatus();
-        if (!isBackendAvailable) {
+
+        // ---> Update UI based on status
+        if (isBackendAvailable) {
+            if (statusTextElement) statusTextElement.textContent = 'Connected';
+            if (statusIndicatorElement) {
+                statusIndicatorElement.classList.remove('disconnected');
+                statusIndicatorElement.classList.add('connected');
+            }
+            return true; // Indicate success
+        } else {
+            if (statusTextElement) statusTextElement.textContent = 'Error';
+            if (statusIndicatorElement) {
+                statusIndicatorElement.classList.remove('connected');
+                statusIndicatorElement.classList.add('disconnected');
+            }
             showError('Backend service is not available');
-            return false;
+            return false; // Indicate failure
         }
-        
-        return true;
+        // <--- END Update UI
+
     } catch (error) {
         console.error('[ERROR] Connection initialization failed:', error);
+        // ---> Update UI on generic error
+        if (statusTextElement) statusTextElement.textContent = 'Error';
+        if (statusIndicatorElement) {
+            statusIndicatorElement.classList.remove('connected');
+            statusIndicatorElement.classList.add('disconnected');
+        }
+        // <--- END Update UI
         showError('Failed to initialize connections');
         return false;
     }
@@ -145,6 +181,7 @@ async function checkBackendStatus() {
         await apiClient.ping();
         return true;
     } catch (error) {
+        // Keep this error log as it indicates a fundamental connectivity issue
         console.error('[ERROR] Backend status check failed:', error);
         return false;
     }

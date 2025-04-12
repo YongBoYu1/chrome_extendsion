@@ -16,94 +16,20 @@ export function renderMarkdown(markdown) {
         return '';
     }
 
-    console.log('[DEBUG] Rendering markdown...');
-
     // Split markdown into sections
     const sections = markdown.split('\n\n');
     
     // Process each section
-    let inKeyPointsSection = false;
-    let keyPointItems = [];
     let processedSections = [];
-    let followingKeyPointsParagraph = null;
     
     for (let i = 0; i < sections.length; i++) {
         const section = sections[i].trim();
         if (!section) continue;
         
-        // Check if this is a Key Points section header
-        if (/^\s*Key\s+Points:?\*?\s*$/i.test(section)) {
-            inKeyPointsSection = true;
-            processedSections.push(processSpecialSection(section));
-            
-            // Check if the next section might be a paragraph of key points
-            if (i + 1 < sections.length) {
-                followingKeyPointsParagraph = sections[i + 1].trim();
-            }
-            continue;
-        }
-        
-        // If we're in the Key Points section, handle content
-        if (inKeyPointsSection) {
-            // Case 1: It's a bullet point list (starts with * or -)
-            if (section.trim().match(/^\s*[\*\-]\s+/)) {
-                // Process bullet points
-                const bulletPoints = section.split('\n');
-                bulletPoints.forEach(point => {
-                    if (point.trim()) {
-                        keyPointItems.push(point.trim());
-                    }
-                });
-                continue;
-            } 
-            // Case 2: It's a paragraph that follows the Key Points header and we haven't processed bullet points yet
-            else if (keyPointItems.length === 0 && section === followingKeyPointsParagraph) {
-                // Split paragraph into sentences and convert to bullet points
-                const sentences = section.match(/[^.!?]+[.!?]+/g) || [section];
-                sentences.forEach(sentence => {
-                    if (sentence.trim()) {
-                        keyPointItems.push('* ' + sentence.trim());
-                    }
-                });
-                followingKeyPointsParagraph = null;
-                i++; // Skip this section since we've processed it
-                continue;
-            }
-            // Case 3: It's a paragraph but we haven't found any bullet points yet
-            else if (keyPointItems.length === 0) {
-                // Treat the entire section as a single bullet point
-                keyPointItems.push('* ' + section);
-                continue;
-            }
-            // Case 4: We've reached the end of the key points section
-            else if (keyPointItems.length > 0) {
-                // Render the bullet list before continuing
-                renderKeyPointsList();
-                inKeyPointsSection = false;
-            }
-        }
-        
         // Normal section processing
         processedSections.push(processSpecialSection(section));
     }
     
-    // If we still have key points at the end of processing, render them
-    if (inKeyPointsSection && keyPointItems.length > 0) {
-        renderKeyPointsList();
-    }
-    
-    function renderKeyPointsList() {
-        const bulletList = `<ul class="list-disc pl-6 space-y-2 mb-6">
-            ${keyPointItems.map(item => {
-                // Remove the bullet character (* or -) and clean it
-                const cleanItem = item.replace(/^\s*[\*\-]\s*/, '');
-                return `<li class="text-gray-700 dark:text-gray-300">${processMarkdownInline(cleanItem)}</li>`;
-            }).join('\n')}
-        </ul>`;
-        processedSections.push(bulletList);
-        keyPointItems = [];
-    }
-
     return processedSections.join('\n');
 }
 
@@ -138,87 +64,33 @@ function processMarkdownInline(text) {
 }
 
 /**
- * Processes special sections with specific formatting
+ * Processes special sections with specific formatting - SIMPLIFIED
  * @param {string} section - The section to process
  * @returns {string} - Processed section HTML
  */
 function processSpecialSection(section) {
-    // Handle standard markdown headers
+    // Handle standard markdown headers ONLY for structural headings
     if (section.startsWith('# ')) {
         const headerText = section.substring(2).trim();
-        const headerId = headerText.toLowerCase().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-');
-        return `<h1 class="text-3xl font-bold text-gray-900 dark:text-gray-100 mt-8 mb-4" id="${headerId}">${headerText}</h1>`;
+        const headerId = generateHeadingId(headerText);
+        return `<h1 class="text-3xl font-bold text-gray-900 dark:text-gray-100 mt-8 mb-6" id="${headerId}">${headerText}</h1>`;
     }
     
     if (section.startsWith('## ')) {
         const headerText = section.substring(3).trim();
-        const headerId = headerText.toLowerCase().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-');
-        return `<h2 class="text-2xl font-bold text-gray-800 dark:text-gray-200 mt-6 mb-3" id="${headerId}">${headerText}</h2>`;
+        const headerId = generateHeadingId(headerText);
+        return `<h2 class="text-2xl font-bold text-gray-800 dark:text-gray-200 mt-6 mb-4" id="${headerId}">${headerText}</h2>`;
     }
     
     if (section.startsWith('### ')) {
         const headerText = section.substring(4).trim();
-        const headerId = headerText.toLowerCase().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-');
-        return `<h3 class="text-xl font-bold text-gray-700 dark:text-gray-300 mt-5 mb-3" id="${headerId}">${headerText}</h3>`;
+        const headerId = generateHeadingId(headerText);
+        return `<h3 class="text-xl font-bold text-gray-700 dark:text-gray-300 mt-5 mb-4" id="${headerId}">${headerText}</h3>`;
     }
     
-    // Pattern 1: Standalone header with or without trailing asterisk
-    // Example: "**Header:**" or "**Header:*"
-    const headerStandalonePattern = /^\s*\*\*(.*?):\*\*?\s*$/;
-    
-    // Pattern 2: Header followed by content 
-    // Example: "**Header:** Content"
-    const headerWithContentPattern = /^\s*\*\*(.*?):\*\*\s+(.*)/;
-    
-    // Pattern 3: Header with asterisk followed by content
-    // Example: "**Header:* Content
-    const headerWithAsteriskPattern = /^\s*\*\*(.*?):\*\s+(.*)/;
-    
-    // Special pattern for Key Points section
-    const keyPointsPattern = /^\s*Key\s+Points:?\*?\s*$/i;
-
-    // Check for Key Points special pattern first
-    if (keyPointsPattern.test(section)) {
-        const sectionId = 'key-points';
-        return `<h3 class="text-xl font-bold text-gray-800 dark:text-gray-200 mt-6 mb-3" id="${sectionId}">Key Points</h3>`;
-    }
-    // Check for Pattern 1 (standalone header)
-    else if (headerStandalonePattern.test(section)) {
-        const match = section.match(headerStandalonePattern);
-        const headerText = match[1].trim();
-        // Generate kebab-case ID from header text
-        const sectionId = headerText.toLowerCase().replace(/\s+/g, '-');
-        
-        return `<h3 class="text-xl font-bold text-gray-800 dark:text-gray-200 mt-6 mb-3" id="${sectionId}">${headerText}</h3>`;
-    }
-    // Check for Pattern 2 (header with content)
-    else if (headerWithContentPattern.test(section)) {
-        const match = section.match(headerWithContentPattern);
-        const headerText = match[1].trim();
-        const contentText = match[2].trim();
-        // Generate kebab-case ID from header text
-        const sectionId = headerText.toLowerCase().replace(/\s+/g, '-');
-        
-        return `<h3 class="text-xl font-bold text-gray-800 dark:text-gray-200 mt-6 mb-3" id="${sectionId}">${headerText}</h3>
-            <div class="text-gray-700 dark:text-gray-300 mb-4">
-                <p>${processMarkdownInline(contentText)}</p>
-            </div>`;
-    }
-    // Check for Pattern 3 (header with asterisk followed by content)
-    else if (headerWithAsteriskPattern.test(section)) {
-        const match = section.match(headerWithAsteriskPattern);
-        const headerText = match[1].trim();
-        const contentText = match[2].trim();
-        // Generate kebab-case ID from header text
-        const sectionId = headerText.toLowerCase().replace(/\s+/g, '-');
-        
-        return `<h3 class="text-xl font-bold text-gray-800 dark:text-gray-200 mt-6 mb-3" id="${sectionId}">${headerText}</h3>
-            <div class="text-gray-700 dark:text-gray-300 mb-4">
-                <p>${processMarkdownInline(contentText)}</p>
-            </div>`;
-    }
-    // Default: Not a special section, process with markdown
-    return `<p class="text-gray-700 dark:text-gray-300 my-3">${processMarkdownInline(section)}</p>`;
+    // Default: Treat EVERYTHING else as a paragraph.
+    // Inline formatting (like **bold**) will be handled by processMarkdownInline.
+    return `<p class="text-gray-700 dark:text-gray-300 my-4">${processMarkdownInline(section)}</p>`;
 }
 
 /**
@@ -265,16 +137,9 @@ export async function loadAndDisplayLatestContent() {
  * @param {Object} content - Content object with title, markdown, html, etc.
  */
 export async function displayProcessedContent(content) {
-    console.log('[DEBUG] Displaying processed content:', {
-        hasHtml: !!content.html,
-        hasMarkdown: !!content.markdown,
-        hasSummary: !!content.summary,
-        title: content.title
-    });
-
     const contentContainer = document.getElementById('contentContainer');
     if (!contentContainer) {
-        console.error('[ERROR] Content container not found');
+        console.error('[displayProcessedContent] ERROR: Content container (#contentContainer) not found!');
         return;
     }
 
@@ -283,7 +148,7 @@ export async function displayProcessedContent(content) {
 
     // Create main content wrapper
     const mainWrapper = document.createElement('div');
-    mainWrapper.className = 'max-w-4xl mx-auto p-6';
+    mainWrapper.className = 'p-6';
 
     // Add title section
     const titleSection = document.createElement('div');
@@ -295,21 +160,41 @@ export async function displayProcessedContent(content) {
 
     // Create content wrapper
     const contentWrapper = document.createElement('div');
-    contentWrapper.className = 'prose dark:prose-invert max-w-none';
+    contentWrapper.className = 'prose dark:prose-invert';
 
     // Handle different content formats
     let processedContent = '';
-    if (content.markdown) {
-        console.log('[DEBUG] Processing markdown content');
-        processedContent = renderMarkdown(content.markdown);
+    let markdownToRender = content.markdown; // Start with original markdown
+
+    // --- Check for and remove duplicate H1 from markdown --- 
+    if (content.title && markdownToRender) {
+        const lines = markdownToRender.trim().split('\n');
+        if (lines.length > 0) {
+            const firstLine = lines[0].trim();
+            if (firstLine.startsWith('# ')) {
+                const h1Text = firstLine.substring(2).trim();
+                // Compare titles case-insensitively
+                if (h1Text.toLowerCase() === content.title.trim().toLowerCase()) {
+                    markdownToRender = lines.slice(1).join('\n'); 
+                }
+            }
+        }
+    }
+    // --- End of duplicate H1 check ---
+
+    if (markdownToRender) { // Use the potentially modified markdown
+        try {
+            processedContent = renderMarkdown(markdownToRender);
+        } catch (renderError) {
+            console.error('[displayProcessedContent] ERROR during renderMarkdown:', renderError);
+            processedContent = '<p class="text-red-500">Error rendering Markdown.</p>';
+        }
     } else if (content.html) {
-        console.log('[DEBUG] Using provided HTML content');
         processedContent = content.html;
     } else if (content.summary) {
-        console.log('[DEBUG] Using summary content');
-        processedContent = renderMarkdown(content.summary);
+        processedContent = renderMarkdown(content.summary); // Assuming summary is also markdown
     } else {
-        console.warn('[WARN] No content available to display');
+        console.warn('[displayProcessedContent] WARN: No content (markdown, html, summary) found to display.');
         processedContent = '<p class="text-gray-600 dark:text-gray-400">No content available</p>';
     }
 
@@ -318,10 +203,10 @@ export async function displayProcessedContent(content) {
     
     // Add reading time if available
     if (content.readingTime) {
-        const readingTime = document.createElement('div');
-        readingTime.className = 'text-sm text-gray-500 dark:text-gray-400 mt-4';
-        readingTime.textContent = formatReadingTime(content.readingTime);
-        mainWrapper.appendChild(readingTime);
+        const readingTimeDiv = document.createElement('div');
+        readingTimeDiv.className = 'text-sm text-gray-500 dark:text-gray-400 mt-4';
+        readingTimeDiv.textContent = formatReadingTime(content.readingTime);
+        mainWrapper.appendChild(readingTimeDiv);
     }
 
     // Append content and show container
@@ -338,8 +223,6 @@ export async function displayProcessedContent(content) {
 
     // Setup back to top button
     setupBackToTopButton();
-
-    console.log('[DEBUG] Content displayed successfully');
 }
 
 /**
@@ -478,6 +361,8 @@ function updateReadingStats(content) {
     const readingTimeValue = document.getElementById('readingTimeValue');
     if (readingTimeValue && content.readingTime) {
         readingTimeValue.textContent = `${Math.round(content.readingTime)} min`;
+    } else if (readingTimeValue) {
+        readingTimeValue.textContent = 'N/A';
     }
     
     // Update word count
@@ -497,45 +382,42 @@ function updateReadingStats(content) {
 }
 
 /**
- * Updates key takeaways in the sidebar
+ * Updates the key takeaways section in the sidebar
  * @param {Object} content - Content object
  */
 function updateKeyTakeaways(content) {
     const keyTakeawaysList = document.getElementById('mainKeyTakeawaysList');
-    if (!keyTakeawaysList) {
-        console.error('[ERROR] Key takeaways list element not found');
-        return;
-    }
+    if (!keyTakeawaysList) return;
     
     // Clear existing takeaways
     keyTakeawaysList.innerHTML = '';
     
-    console.log('[DEBUG] Updating key takeaways with content:', {
-        hasKeyPoints: Array.isArray(content.keyPoints) && content.keyPoints.length > 0,
-        keyPointsCount: Array.isArray(content.keyPoints) ? content.keyPoints.length : 0,
-        title: content.title
-    });
-    
-    // First check if keyPoints are explicitly provided by the backend
-    if (content.keyPoints && Array.isArray(content.keyPoints) && content.keyPoints.length > 0) {
-        console.log('[DEBUG] Using provided key points:', content.keyPoints);
-        content.keyPoints.forEach(point => {
+    // Check if keyPoints exists and is a non-empty array
+    const keyPoints = content?.keyPoints;
+    const hasKeyPoints = Array.isArray(keyPoints) && keyPoints.length > 0;
+
+    if (hasKeyPoints) {
+        keyPoints.forEach(point => {
             const item = document.createElement('li');
-            item.className = 'key-takeaways-item';
-            // Remove leading bullet point characters (* or -) from the point text
-            const cleanedPoint = point.replace(/^\s*[\*\-]\s*/, '');
-            item.innerHTML = processMarkdownInline(cleanedPoint);
+            // Use Tailwind classes for styling each item
+            item.className = 'flex items-start space-x-2 p-2 rounded-md text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700';
+            
+            // Add an SVG icon (e.g., checkmark or bullet)
+            item.innerHTML = `
+                <svg class="flex-shrink-0 w-4 h-4 mt-0.5 text-blue-600 dark:text-blue-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                </svg>
+                <span>${escapeHtml(point)}</span>
+            `;
             keyTakeawaysList.appendChild(item);
         });
-        return;
+    } else {
+        // Fallback message if no key points
+        const item = document.createElement('li');
+        item.className = 'text-gray-500 dark:text-gray-400 italic text-sm px-2 py-2';
+        item.textContent = 'No key points available';
+        keyTakeawaysList.appendChild(item);
     }
-
-    // If no key points are available, show a placeholder message
-    console.log('[DEBUG] No key points found in content');
-    const item = document.createElement('li');
-    item.className = 'text-gray-500 dark:text-gray-400 italic text-sm pl-2 py-2';
-    item.textContent = 'No key points available';
-    keyTakeawaysList.appendChild(item);
 }
 
 export async function loadContentHistory() {

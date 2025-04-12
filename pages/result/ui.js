@@ -17,8 +17,6 @@ let currentState = UIState.INITIAL;
  * @param {string} newState - The new UI state to transition to
  */
 export function setUIState(newState) {
-    console.log('[DEBUG] UI State transition:', currentState, '->', newState);
-    
     // If the state didn't change, no need to update UI
     if (currentState === newState) {
         return;
@@ -62,25 +60,20 @@ function updateUIVisibility(previousState) {
     errorContainer.style.display = 'none';
 
     // Then show only what's needed for current state
-    console.log('[DEBUG] Setting UI visibility for state:', currentState);
-    
     switch (currentState) {
         case UIState.PROCESSING:
             processingContainer.classList.remove('hidden');
             processingContainer.style.display = 'flex';
-            console.log('[DEBUG] Processing container visible');
             break;
             
         case UIState.CONTENT:
             contentContainer.classList.remove('hidden');
             contentContainer.style.display = 'block';
-            console.log('[DEBUG] Content container visible');
             break;
             
         case UIState.ERROR:
             errorContainer.classList.remove('hidden');
             errorContainer.style.display = 'flex';
-            console.log('[DEBUG] Error container visible');
             break;
     }
 
@@ -92,7 +85,6 @@ function updateUIVisibility(previousState) {
  * Shows the processing UI and resets progress indicators
  */
 export function showProcessingUI() {
-    console.log('[DEBUG] Showing processing UI...');
     setUIState(UIState.PROCESSING);
     
     // Reset progress bar
@@ -141,14 +133,12 @@ export function updateProcessingUI(state) {
     if (progressBar) {
         const progress = Math.min(Math.max(state.progress || 0, 0), 1);
         progressBar.style.width = `${progress * 100}%`;
-        console.log('[DEBUG] Progress bar updated:', `${progress * 100}%`);
     }
 
     // Update status text
     const processingStatus = document.getElementById('processingStatus');
     if (processingStatus) {
         processingStatus.textContent = state.statusText || 'Processing...';
-        console.log('[DEBUG] Status text updated:', state.statusText);
     }
 
     // Update step indicators
