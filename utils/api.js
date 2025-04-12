@@ -15,10 +15,10 @@ class APIClient {
         return this.#makeRequest('/api/ping');
     }
 
-    async summarize(url, options = {}) {
+    async summarize(url, mode = 'summarize') {
         return this.#makeRequest('/api/summarize', {
             method: 'POST',
-            body: { url, ...options }
+            body: { url, mode }
         });
     }
 
