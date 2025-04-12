@@ -29,7 +29,7 @@ class PageProcessor:
         Aggressively clean markdown to remove non-content elements (links, images, citations, etc.)
         while attempting to preserve basic paragraph and heading structure for summarization context.
         Focuses on reducing token count before sending to LLM.
-        """
+        """ 
         # Parse the markdown into tokens
         tokens = self.md_parser.parse(markdown_content)
         
