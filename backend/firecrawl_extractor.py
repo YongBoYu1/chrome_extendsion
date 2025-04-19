@@ -7,7 +7,7 @@ import re
 from typing import Dict, List, Optional, Any
 import requests
 import time
-from cookie_handler import cookie_handler # Import the singleton instance
+from .cookie_handler import cookie_handler # Import the singleton instance
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 
 # Configure basic logging

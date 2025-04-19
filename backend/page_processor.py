@@ -10,8 +10,8 @@ import re
 from datetime import datetime
 from typing import Dict, List, Optional
 from pathlib import Path
-from firecrawl_extractor import FireCrawlExtractor
-from gemini_summarizer import GeminiSummarizer
+from .firecrawl_extractor import FireCrawlExtractor
+from .gemini_summarizer import GeminiSummarizer
 import markdown_it
 
 # Configure logging

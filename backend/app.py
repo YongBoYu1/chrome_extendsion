@@ -18,9 +18,9 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
 # Fix import path - using relative import since we're running from the backend directory
-from firecrawl_extractor import FireCrawlExtractor
-from gemini_summarizer import GeminiSummarizer
-from page_processor import PageProcessor
+from .firecrawl_extractor import FireCrawlExtractor
+from .gemini_summarizer import GeminiSummarizer
+from .page_processor import PageProcessor
 
 # Configure basic logging
 logging.basicConfig(

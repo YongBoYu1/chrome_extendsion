@@ -1,10 +1,5 @@
 #!/bin/bash
 
-# Navigate to backend directory
-if [ -d "backend" ]; then
-    cd backend
-fi
-
 # Check internet connectivity
 echo "Checking internet connectivity..."
 if ping -c 1 google.com &> /dev/null; then
@@ -14,5 +9,5 @@ else
     echo "The backend will still start, but duplicating pages may not work."
 fi
 
-# Run the backend server
-python app.py 
+# Run the backend server as a module from the project root
+python -m backend.app 
