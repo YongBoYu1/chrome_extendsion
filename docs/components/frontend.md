@@ -21,6 +21,10 @@ The Chrome Extension Frontend consists of several key components that work toget
 - Handles communication between components
 - Controls content processing flow
 
+### 4. Utilities (`utils/`)
+- Contains reusable helper functions and modules.
+- Centralizes common logic like API communication.
+
 ## Key Files and Their Responsibilities
 
 ### Popup Interface
@@ -74,3 +78,29 @@ The Chrome Extension Frontend consists of several key components that work toget
 // Processing state
 // ... (keep existing lines) ...
 ```
+
+### Background Script
+
+#### `background/background.js` or `background/service-worker.js`
+```javascript
+// Core background tasks
+- Event listeners (e.g., onInstalled, onMessage)
+- State management across the extension
+- Orchestration of content processing
+- Communication hub between popup, content scripts, and pages
+// Note: May delegate actual API calls to utils/api.js
+```
+
+### Utilities
+
+#### `utils/api.js`
+```javascript
+// Backend API Client
+- Centralizes all HTTP requests to the Python backend.
+- Contains the configuration for the backend URL (CONFIG.BACKEND_URL).
+- Provides methods like ping(), summarize(), etc.
+- Handles request formatting and basic error handling.
+// IMPORTANT: Update CONFIG.BACKEND_URL in this file when deploying the backend.
+```
+
+### Content Scripts (`content/` - If applicable)
