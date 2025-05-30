@@ -55,6 +55,19 @@ function setupSummarizeButton() {
                     url: currentTab?.url,
                     isValid: currentTab ? isValidUrl(currentTab.url) : false
                 });
+                
+                // Check specifically for PDF files to show better error message
+                if (currentTab && currentTab.url) {
+                    const url = new URL(currentTab.url);
+                    const pathname = url.pathname.toLowerCase();
+                    const unsupportedExtensions = ['.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx'];
+                    
+                    if (unsupportedExtensions.some(ext => pathname.endsWith(ext))) {
+                        showError('Word, Excel, and PowerPoint files are not currently supported. Please try a regular webpage or PDF.');
+                        return;
+                    }
+                }
+                
                 showError('Cannot process this type of page');
                 return;
             }
@@ -205,7 +218,21 @@ function hideError() {
 function isValidUrl(urlString) {
     try {
         const url = new URL(urlString);
-        return url.protocol === 'http:' || url.protocol === 'https:';
+        
+        // Check if it's a valid HTTP/HTTPS URL
+        if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+            return false;
+        }
+        
+        // Now we support PDFs! Only block other document types
+        const pathname = url.pathname.toLowerCase();
+        const unsupportedExtensions = ['.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx'];
+        
+        if (unsupportedExtensions.some(ext => pathname.endsWith(ext))) {
+            return false;
+        }
+        
+        return true;
     } catch {
         return false;
     }

@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Page Processor",
-  "version": "1.0",
-  "description": "Process and summarize web pages",
+  "version": "1.0.1",
+  "description": "Summarize web pages with AI. Creates readable summaries in new tabs for better reading experience.",
   "action": {
     "default_popup": "popup/popup.html",
     "default_icon": {
@@ -17,11 +17,10 @@
     "tabs"
   ],
   "host_permissions": [
-    "http://localhost:5001/*",
-    "http://127.0.0.1:5001/*"
+    "https://summary-extension-backend-518552901017.us-central1.run.app/*"
   ],
   "content_security_policy": {
-    "extension_pages": "script-src 'self' 'wasm-unsafe-eval' http://localhost:* http://127.0.0.1:*; object-src 'self'; connect-src 'self' http://localhost:5001 http://127.0.0.1:5001; style-src 'self' 'unsafe-inline';"
+    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'; connect-src 'self' https://summary-extension-backend-518552901017.us-central1.run.app https://*.googleapis.com"
   },
   "icons": {
     "16": "icons/icon16.png",

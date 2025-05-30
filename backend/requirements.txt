@@ -11,6 +11,7 @@ networkx>=3.1
 markdown-it-py
 playwright>=1.41.0
 tenacity>=8.2.3 # For automatic retries
+PyPDF2>=3.0.1 # For PDF text extraction
 
 # After installing requirements, run:
 # python -m playwright install chromium 
