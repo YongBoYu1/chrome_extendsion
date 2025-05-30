@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Page Processor",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Summarize web pages with AI. Creates readable summaries in new tabs for better reading experience.",
   "action": {
     "default_popup": "popup/popup.html",
